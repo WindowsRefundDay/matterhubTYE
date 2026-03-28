@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSmartHome } from "@/hooks/use-smart-home";
 import { useIdleTimer } from "@/hooks/use-idle-timer";
@@ -13,6 +13,7 @@ import { ScreenRenderer } from "./screen-renderer";
 import { BottomSheet } from "./ui/bottom-sheet";
 import { RoomDetail } from "./rooms/room-detail";
 import { DeviceControl } from "./devices/device-control";
+import { VoiceEdgeAnimation } from "./voice-assistant/voice-edge-animation";
 import { Icon } from "./ui/icon";
 import type { Screen } from "@/types";
 
@@ -31,6 +32,18 @@ export function AppShell() {
   } = useSmartHome();
 
   const { mode, screen, selectedRoomId, selectedDeviceId } = appState;
+
+  const [voiceActive, setVoiceActive] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "g" || e.key === "G") {
+        setVoiceActive((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const handleIdle = useCallback(() => {
     goHome();
@@ -138,6 +151,12 @@ export function AppShell() {
       >
         {selectedDevice && <DeviceControl device={selectedDevice} />}
       </BottomSheet>
+
+      {/* Voice assistant edge animation (press G to toggle) */}
+      <VoiceEdgeAnimation
+        active={voiceActive}
+        onDismiss={() => setVoiceActive(false)}
+      />
     </DeviceFrame>
   );
 }
