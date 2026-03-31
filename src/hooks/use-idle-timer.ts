@@ -4,13 +4,11 @@ import { useEffect, useRef, useCallback } from "react";
 
 export function useIdleTimer(onIdle: () => void, timeout = 30000) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onIdleRef = useRef(onIdle);
-  onIdleRef.current = onIdle;
 
   const reset = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => onIdleRef.current(), timeout);
-  }, [timeout]);
+    timerRef.current = setTimeout(() => onIdle(), timeout);
+  }, [onIdle, timeout]);
 
   useEffect(() => {
     const events = ["pointerdown", "pointermove", "keydown"] as const;

@@ -16,17 +16,17 @@ interface NavItemProps {
 export function NavItem({ screen, icon, label, isActive, onSelect }: NavItemProps) {
   return (
     <motion.button
-      whileTap={{ scale: 0.92 }}
-      onPointerDown={() => onSelect(screen)}
+      whileTap={{ scale: 0.9 }}
+      onClick={() => onSelect(screen)}
       className={cn(
-        "flex flex-col items-center gap-1.5 px-4 py-3 rounded-2xl transition-colors",
+        "flex flex-col items-center justify-center gap-1.5 min-w-[56px] min-h-[56px] px-3 py-2.5 rounded-2xl transition-colors",
         isActive
           ? "bg-accent/15 text-accent"
           : "text-foreground/40 active:text-foreground/60"
       )}
     >
-      <Icon name={icon} size={22} />
-      <span className="text-[11px] font-medium tracking-wide">{label}</span>
+      <Icon name={icon} size={28} />
+      <span className="text-[12px] font-medium tracking-wide">{label}</span>
     </motion.button>
   );
 }

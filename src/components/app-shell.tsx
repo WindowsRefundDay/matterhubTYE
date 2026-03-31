@@ -81,9 +81,9 @@ export function AppShell() {
         )}
       </AnimatePresence>
 
-      {/* Layer 2: Navigation (when not ambient) */}
+      {/* Layer 2: Navigation drawer (always available) */}
       <AnimatePresence>
-        {(mode === "nav" || mode === "screen" || mode === "detail") && (
+        {(mode === "ambient" || mode === "nav" || mode === "screen" || mode === "detail") && (
           <NavLayer currentScreen={screen} onSelect={handleNavSelect} />
         )}
       </AnimatePresence>
