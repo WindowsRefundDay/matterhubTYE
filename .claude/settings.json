@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.worktree_path // empty' | { read -r p && cd \"$p\" && npm install; } 2>/dev/null || true",
+            "statusMessage": "Running npm install in new worktree..."
+          }
+        ]
+      }
+    ]
+  }
+}
