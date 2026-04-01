@@ -6,8 +6,7 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
-      "autoPort": true,
-      "cwd": "/Users/joelmanuel/matterhubTYE/.claude/worktrees/musing-yonath"
+      "autoPort": true
     },
     {
       "name": "Next.js Start (production)",
