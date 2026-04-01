@@ -9,6 +9,8 @@ import {
   useTransform,
   type PanInfo,
 } from "framer-motion";
+import type { ValueAnimationTransition } from "motion-dom";
+import { AssistantHandle } from "@/components/assistant/assistant-handle";
 import { NavItem } from "./nav-item";
 import type { Screen } from "@/types";
 
@@ -25,112 +27,250 @@ const navItems: { screen: Screen; icon: string; label: string }[] = [
   { screen: "settings", icon: "settings", label: "Settings" },
 ];
 
-// Drawer sizing — generous for touch on 5" screens
 const DRAWER_HEIGHT = 160;
-// Peek area: large enough to comfortably grab/swipe (≥48px touch target)
 const PEEK_HEIGHT = 56;
-const CLOSED_Y = DRAWER_HEIGHT - PEEK_HEIGHT;
+const FULL_TOP = 0;
+const INITIAL_VIEWPORT_HEIGHT = DRAWER_HEIGHT + PEEK_HEIGHT + 20;
 const SPRING_TRANSITION = { type: "spring", damping: 28, stiffness: 300 } as const;
+const SNAP_SPRING = { type: "spring", damping: 34, stiffness: 240 } as const;
+type DrawerTransition = ValueAnimationTransition<number>;
+
+type SnapPoint = "closed" | "open" | "full";
 
 export function NavLayer({ currentScreen, onSelect }: NavLayerProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const y = useMotionValue(DRAWER_HEIGHT + 20);
+  const initialClosedTop = Math.max(INITIAL_VIEWPORT_HEIGHT - PEEK_HEIGHT, FULL_TOP);
+
+  const [snapPoint, setSnapPoint] = useState<SnapPoint>("closed");
+  const [viewportH, setViewportH] = useState(INITIAL_VIEWPORT_HEIGHT);
+  const y = useMotionValue(initialClosedTop);
   const dragControls = useDragControls();
   const animationRef = useRef<{ stop: () => void } | null>(null);
+  const snapPointRef = useRef<SnapPoint>("closed");
+  const viewportHRef = useRef(INITIAL_VIEWPORT_HEIGHT);
+  const suppressToggleRef = useRef(false);
 
-  const contentOpacity = useTransform(y, [CLOSED_Y, 0], [0, 1]);
+  const closedTop = Math.max(viewportH - PEEK_HEIGHT, FULL_TOP);
+  const openTop = Math.max(viewportH - DRAWER_HEIGHT, FULL_TOP);
+
+  useEffect(() => {
+    const syncViewport = () => {
+      const nextViewportH = window.innerHeight;
+      if (nextViewportH === viewportHRef.current) return;
+
+      const nextClosedTop = Math.max(nextViewportH - PEEK_HEIGHT, FULL_TOP);
+      const nextOpenTop = Math.max(nextViewportH - DRAWER_HEIGHT, FULL_TOP);
+      const nextTop =
+        snapPointRef.current === "full"
+          ? FULL_TOP
+          : snapPointRef.current === "open"
+            ? nextOpenTop
+          : nextClosedTop;
+
+      viewportHRef.current = nextViewportH;
+      setViewportH(nextViewportH);
+      y.set(nextTop);
+    };
+
+    syncViewport();
+    window.addEventListener("resize", syncViewport);
+
+    return () => {
+      window.removeEventListener("resize", syncViewport);
+      animationRef.current?.stop();
+    };
+  }, [y]);
+
+  useEffect(() => {
+    snapPointRef.current = snapPoint;
+  }, [snapPoint]);
+
+  const getSnapTop = useCallback(
+    (point: SnapPoint) => {
+      if (point === "full") return FULL_TOP;
+      if (point === "open") return openTop;
+      return closedTop;
+    },
+    [closedTop, openTop]
+  );
+
+  const getOpenProgress = useCallback(
+    (top: number) => {
+      const range = Math.max(closedTop - openTop, 1);
+      return Math.min(Math.max((closedTop - top) / range, 0), 1);
+    },
+    [closedTop, openTop]
+  );
+
+  const getFullProgress = useCallback(
+    (top: number) => {
+      const range = Math.max(openTop - FULL_TOP, 1);
+      return Math.min(Math.max((openTop - top) / range, 0), 1);
+    },
+    [openTop]
+  );
+
+  const contentOpacity = useTransform(y, (top) => getOpenProgress(top));
+
+  const curveRadius = useTransform(y, (top) => {
+    if (top >= openTop) {
+      return 20 + getOpenProgress(top) * 24;
+    }
+
+    const fullProgress = getFullProgress(top);
+    const bellPeak = 0.3;
+
+    if (fullProgress <= bellPeak) {
+      return 44 + (fullProgress / bellPeak) * 36;
+    }
+
+    return 80 * Math.max(0, 1 - (fullProgress - bellPeak) / (1 - bellPeak));
+  });
+
+  const curveSpread = useTransform(y, (top) => {
+    if (top >= openTop) {
+      return 5 + getOpenProgress(top) * 5;
+    }
+
+    const fullProgress = getFullProgress(top);
+    const bellPeak = 0.3;
+
+    if (fullProgress <= bellPeak) {
+      return 10 + (fullProgress / bellPeak) * 8;
+    }
+
+    return 18 * Math.max(0, 1 - (fullProgress - bellPeak) / (1 - bellPeak));
+  });
+
+  const topCornerRadius = useTransform(curveRadius, (radius) => `50% ${radius}px`);
+  const curveScaleX = useTransform(curveSpread, (spread) => 1 + (spread * 2) / 100);
 
   const animateTo = useCallback(
-    (nextY: number) => {
+    (nextTop: number, transition: DrawerTransition = SPRING_TRANSITION) => {
       animationRef.current?.stop();
-      animationRef.current = animate(y, nextY, SPRING_TRANSITION);
+      animationRef.current = animate(y, nextTop, transition);
     },
     [y]
   );
 
-  const setDrawerOpen = useCallback(
-    (open: boolean) => {
-      animateTo(open ? 0 : CLOSED_Y);
-      setIsOpen(open);
+  const snapTo = useCallback(
+    (point: SnapPoint) => {
+      if (!viewportH) return;
+      animateTo(getSnapTop(point), point === "full" ? SNAP_SPRING : SPRING_TRANSITION);
+      setSnapPoint(point);
     },
-    [animateTo]
+    [animateTo, getSnapTop, viewportH]
   );
-
-  // Animate to peek position on mount.
-  useEffect(() => {
-    animateTo(CLOSED_Y);
-
-    return () => {
-      animationRef.current?.stop();
-    };
-  }, [animateTo]);
 
   const handleDragEnd = useCallback(
     (_: unknown, info: PanInfo) => {
-      const shouldOpen = info.velocity.y < -80 || y.get() < CLOSED_Y / 2;
-      setDrawerOpen(shouldOpen);
+      const currentTop = y.get();
+      const vy = info.velocity.y;
+
+      if (vy <= -1200) {
+        snapTo(currentTop <= openTop * 0.8 ? "full" : "open");
+      } else if (vy >= 1200) {
+        snapTo(currentTop >= openTop ? "closed" : "open");
+      } else {
+        const closedThreshold = openTop + (closedTop - openTop) / 2;
+        const fullThreshold = openTop * 0.45;
+
+        if (currentTop >= closedThreshold) {
+          snapTo("closed");
+        } else if (currentTop <= fullThreshold) {
+          snapTo("full");
+        } else {
+          snapTo("open");
+        }
+      }
+
+      requestAnimationFrame(() => {
+        suppressToggleRef.current = false;
+      });
     },
-    [setDrawerOpen, y]
+    [closedTop, openTop, snapTo, y]
   );
 
   const toggleDrawer = useCallback(() => {
-    setDrawerOpen(!isOpen);
-  }, [isOpen, setDrawerOpen]);
+    if (snapPoint === "full") {
+      snapTo("open");
+    } else if (snapPoint === "open") {
+      snapTo("closed");
+    } else {
+      snapTo("open");
+    }
+  }, [snapPoint, snapTo]);
+
+  const handleHandlePress = useCallback(() => {
+    if (suppressToggleRef.current) return;
+    toggleDrawer();
+  }, [toggleDrawer]);
 
   const handleNavSelect = useCallback(
     (screen: Screen) => {
       onSelect(screen);
-      setDrawerOpen(false);
+      snapTo("closed");
     },
-    [onSelect, setDrawerOpen]
+    [onSelect, snapTo]
   );
 
   return (
     <motion.div
-      style={{ y, height: DRAWER_HEIGHT }}
+      style={{ y, willChange: "transform", backfaceVisibility: "hidden" }}
+      transformTemplate={(_, generatedTransform) =>
+        generatedTransform === "none" ? "translateZ(0)" : `${generatedTransform} translateZ(0)`
+      }
       drag="y"
       dragControls={dragControls}
       dragListener={false}
-      dragConstraints={{ top: 0, bottom: CLOSED_Y }}
-      dragElastic={0.15}
+      dragConstraints={{ top: FULL_TOP, bottom: closedTop }}
+      dragElastic={0.06}
+      onDragStart={() => {
+        suppressToggleRef.current = true;
+      }}
       onDragEnd={handleDragEnd}
-      className="absolute bottom-0 left-0 right-0 z-30 touch-none"
+      className="absolute inset-0 z-30 isolate touch-none overflow-hidden perf-panel"
     >
-      {/* Curved top edge */}
-      <div className="absolute inset-x-0 top-0 h-full overflow-hidden">
-        <div
-          className="absolute inset-x-[-10%] top-0 bottom-0 bg-surface/85 backdrop-blur-2xl border-t border-border/30"
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <motion.div
+          className="absolute inset-0 border-t border-border/30 bg-surface/85 backdrop-blur-lg"
           style={{
-            borderTopLeftRadius: "50% 44px",
-            borderTopRightRadius: "50% 44px",
+            scaleX: curveScaleX,
+            borderTopLeftRadius: topCornerRadius,
+            borderTopRightRadius: topCornerRadius,
+            willChange: "transform, border-radius",
+            backfaceVisibility: "hidden",
+            transformOrigin: "top center",
           }}
+          transformTemplate={(_, generatedTransform) =>
+            generatedTransform === "none" ? "translateZ(0)" : `${generatedTransform} translateZ(0)`
+          }
         />
       </div>
 
-      {/* Grab handle — large touch area (56px tall, full width) */}
-      <div
-        className="relative z-10 flex justify-center items-center cursor-grab active:cursor-grabbing"
+      <motion.button
+        type="button"
+        className="relative z-10 flex items-center justify-center cursor-grab active:cursor-grabbing"
         style={{ height: PEEK_HEIGHT }}
         onPointerDown={(event) => dragControls.start(event)}
-        onClick={toggleDrawer}
+        onClick={handleHandlePress}
       >
-        <div className="w-14 h-1.5 rounded-full bg-foreground/25" />
-      </div>
+        <AssistantHandle state="drawer" />
+      </motion.button>
 
-      {/* Nav items — evenly spaced, large touch targets */}
       <motion.div
         style={{ opacity: contentOpacity }}
-        className="relative z-10 flex items-center justify-evenly px-2"
+        className="relative z-10 grid grid-cols-5 items-start px-2"
       >
         {navItems.map((item) => (
-          <NavItem
-            key={item.screen}
-            screen={item.screen}
-            icon={item.icon}
-            label={item.label}
-            isActive={currentScreen === item.screen}
-            onSelect={handleNavSelect}
-          />
+          <div key={item.screen} className="flex justify-center">
+            <NavItem
+              screen={item.screen}
+              icon={item.icon}
+              label={item.label}
+              isActive={currentScreen === item.screen}
+              onSelect={handleNavSelect}
+            />
+          </div>
         ))}
       </motion.div>
     </motion.div>

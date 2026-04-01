@@ -1,6 +1,10 @@
 "use client";
 
-import { useSmartHome } from "@/hooks/use-smart-home";
+import {
+  useSmartHomeActions,
+  useSmartHomeDevices,
+  useSmartHomeStaticData,
+} from "@/hooks/use-smart-home";
 import { DeviceTile } from "@/components/devices/device-tile";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -9,7 +13,9 @@ interface RoomDetailProps {
 }
 
 export function RoomDetail({ roomId }: RoomDetailProps) {
-  const { rooms, getDevicesForRoom, toggleDevice, selectDevice } = useSmartHome();
+  const { rooms } = useSmartHomeStaticData();
+  const { getDevicesForRoom } = useSmartHomeDevices();
+  const { toggleDevice, selectDevice } = useSmartHomeActions();
   const room = rooms.find((r) => r.id === roomId);
   const devices = getDevicesForRoom(roomId);
 
@@ -25,8 +31,8 @@ export function RoomDetail({ roomId }: RoomDetailProps) {
         <DeviceTile
           key={device.id}
           device={device}
-          onToggle={() => toggleDevice(device.id)}
-          onSelect={() => selectDevice(device.id)}
+          onToggle={toggleDevice}
+          onSelect={selectDevice}
         />
       ))}
     </div>

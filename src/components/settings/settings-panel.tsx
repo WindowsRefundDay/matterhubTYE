@@ -12,7 +12,7 @@ export function SettingsPanel() {
   return (
     <div className="h-full flex flex-col">
       <h1 className="text-[20px] font-medium text-foreground mb-4">Settings</h1>
-      <div className="flex-1 overflow-y-auto scrollbar-hide space-y-5">
+      <div className="flex-1 overflow-y-auto scrollbar-hide space-y-5 perf-scroll-region">
         {/* Connection Status */}
         <div className="rounded-2xl bg-green-500/10 border border-green-500/20 px-4 py-3 flex items-center gap-3">
           <Icon name="wifi" size={18} className="text-green-400" />
@@ -54,13 +54,13 @@ export function SettingsPanel() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div>
+    <section className="perf-section">
       <h2 className="text-[13px] font-medium text-foreground/40 uppercase tracking-wider mb-1">
         {title}
       </h2>
       <div className="divide-y divide-border/20">
         {children}
       </div>
-    </div>
+    </section>
   );
 }

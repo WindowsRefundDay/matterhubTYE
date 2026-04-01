@@ -3,16 +3,25 @@
 import { useState, useEffect } from "react";
 import { formatTime, formatDate } from "@/lib/utils";
 
-export function useClock() {
-  const [now, setNow] = useState(() => new Date());
+export function useClock(enabled = true) {
+  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, []);
+    if (!enabled) {
+      return;
+    }
 
-  const time = formatTime(now);
-  const date = formatDate(now);
+    const syncNow = () => setNow(new Date());
+    syncNow();
+    const interval = setInterval(syncNow, 1000);
 
-  return { time, date };
+    return () => {
+      clearInterval(interval);
+    };
+  }, [enabled]);
+
+  const time = now ? formatTime(now) : null;
+  const date = now ? formatDate(now) : "";
+
+  return { time, date, ready: now !== null };
 }

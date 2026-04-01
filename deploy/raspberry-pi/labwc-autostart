@@ -1,0 +1,10 @@
+#!/bin/sh
+
+chromium-browser \
+  --kiosk \
+  --noerrdialogs \
+  --disable-infobars \
+  --no-first-run \
+  --enable-features=OverlayScrollbar \
+  --start-maximized \
+  http://127.0.0.1:3000

@@ -1,12 +1,27 @@
 "use client";
 
-import { useSmartHome } from "@/hooks/use-smart-home";
+import { useMemo } from "react";
+import { useSmartHomeDevices } from "@/hooks/use-smart-home";
 
 export function StatusLine() {
-  const { devices, activeDeviceCount } = useSmartHome();
+  const { devices, activeDeviceCount } = useSmartHomeDevices();
 
-  const lock = devices.find((d) => d.type === "lock");
-  const lightsOn = devices.filter((d) => d.category === "lights" && d.isOn).length;
+  const { lock, lightsOn } = useMemo(() => {
+    let lockState = false;
+    let nextLightsOn = 0;
+
+    for (const device of devices) {
+      if (device.type === "lock" && device.isLocked) {
+        lockState = true;
+      }
+
+      if (device.category === "lights" && device.isOn) {
+        nextLightsOn += 1;
+      }
+    }
+
+    return { lock: lockState, lightsOn: nextLightsOn };
+  }, [devices]);
 
   let status: string;
   if (activeDeviceCount === 0) {
@@ -17,7 +32,7 @@ export function StatusLine() {
     status = `${activeDeviceCount} device${activeDeviceCount > 1 ? "s" : ""} active · ${lightsOn} light${lightsOn > 1 ? "s" : ""} on`;
   }
 
-  if (lock?.isLocked) {
+  if (lock) {
     status += " · Door locked";
   }
 

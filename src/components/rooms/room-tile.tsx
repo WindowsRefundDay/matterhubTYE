@@ -1,25 +1,30 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { memo } from "react";
 import { Icon } from "@/components/ui/icon";
-import { useSmartHome } from "@/hooks/use-smart-home";
+import { cn } from "@/lib/utils";
 import type { Room } from "@/types";
 
 interface RoomTileProps {
   room: Room;
+  activeCount: number;
   onSelect: (roomId: string) => void;
 }
 
-export function RoomTile({ room, onSelect }: RoomTileProps) {
-  const { getActiveCountForRoom } = useSmartHome();
-  const activeCount = getActiveCountForRoom(room.id);
+export const RoomTile = memo(function RoomTile({
+  room,
+  activeCount,
+  onSelect,
+}: RoomTileProps) {
   const total = room.deviceIds.length;
 
   return (
-    <motion.button
-      whileTap={{ scale: 0.96 }}
+    <button
       onPointerDown={() => onSelect(room.id)}
-      className="flex flex-col gap-3 p-4 rounded-2xl bg-surface border border-border/20 text-left active:bg-surface-raised transition-colors"
+      className={cn(
+        "flex flex-col gap-3 rounded-2xl border bg-surface p-4 text-left transition-[transform,background-color]",
+        "active:scale-[0.98] active:bg-surface-raised"
+      )}
     >
       <div className="flex items-center justify-between">
         <div className="w-10 h-10 rounded-xl bg-surface-raised flex items-center justify-center">
@@ -35,6 +40,6 @@ export function RoomTile({ room, onSelect }: RoomTileProps) {
           {activeCount}/{total} active
         </p>
       </div>
-    </motion.button>
+    </button>
   );
-}
+});
