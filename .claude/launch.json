@@ -1,0 +1,25 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Next.js Dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000,
+      "autoPort": true,
+      "cwd": "/Users/joelmanuel/matterhubTYE/.claude/worktrees/musing-yonath"
+    },
+    {
+      "name": "Next.js Start (production)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start"],
+      "port": 3000
+    },
+    {
+      "name": "Next.js Standalone",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start:standalone"],
+      "port": 3000
+    }
+  ]
+}

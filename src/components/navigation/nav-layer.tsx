@@ -249,7 +249,7 @@ export function NavLayer({ currentScreen, onSelect }: NavLayerProps) {
 
       <motion.button
         type="button"
-        className="relative z-10 flex items-center justify-center cursor-grab active:cursor-grabbing"
+        className="relative z-10 flex w-full items-center justify-center cursor-grab active:cursor-grabbing"
         style={{ height: PEEK_HEIGHT }}
         onPointerDown={(event) => dragControls.start(event)}
         onClick={handleHandlePress}
