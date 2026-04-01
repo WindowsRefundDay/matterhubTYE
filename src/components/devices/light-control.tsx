@@ -1,12 +1,12 @@
 "use client";
 
-import { useSmartHome } from "@/hooks/use-smart-home";
+import { useSmartHomeActions } from "@/hooks/use-smart-home";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import type { Device } from "@/types";
 
 export function LightControl({ device }: { device: Device }) {
-  const { toggleDevice, setDeviceValue } = useSmartHome();
+  const { toggleDevice, setDeviceValue } = useSmartHomeActions();
 
   return (
     <div className="space-y-5">

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "start:standalone": "HOSTNAME=127.0.0.1 PORT=3000 node .next/standalone/server.js",
+    "lint": "eslint",
+    "test": "node tests/run-tests.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

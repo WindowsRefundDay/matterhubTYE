@@ -43,6 +43,22 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
+.perf-panel {
+  contain: layout paint style;
+}
+
+.perf-scroll-region {
+  contain: layout paint style;
+  content-visibility: auto;
+  contain-intrinsic-size: 320px;
+}
+
+.perf-section {
+  contain: layout paint style;
+  content-visibility: auto;
+  contain-intrinsic-size: 180px;
+}
+
 /* Scrollbar hiding for inner scroll areas */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;

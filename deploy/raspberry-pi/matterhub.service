@@ -1,0 +1,19 @@
+[Unit]
+Description=MatterHub Next.js standalone server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/opt/matterhub
+Environment=NODE_ENV=production
+Environment=HOSTNAME=127.0.0.1
+Environment=PORT=3000
+ExecStart=/usr/bin/node /opt/matterhub/server.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useSmartHome } from "@/hooks/use-smart-home";
+import { useSmartHomeActions, useSmartHomeDevices } from "@/hooks/use-smart-home";
 import { DeviceTile } from "./device-tile";
 import type { DeviceCategory } from "@/types";
 
@@ -21,7 +21,8 @@ interface DeviceListProps {
 }
 
 export function DeviceList({ onSelectDevice }: DeviceListProps) {
-  const { devices, toggleDevice } = useSmartHome();
+  const { devices } = useSmartHomeDevices();
+  const { toggleDevice } = useSmartHomeActions();
 
   const grouped = useMemo(() => {
     const groups: Partial<Record<DeviceCategory, typeof devices>> = {};
@@ -35,12 +36,12 @@ export function DeviceList({ onSelectDevice }: DeviceListProps) {
   return (
     <div className="h-full flex flex-col">
       <h1 className="text-[20px] font-medium text-foreground mb-4">Devices</h1>
-      <div className="flex-1 overflow-y-auto scrollbar-hide space-y-5">
+      <div className="flex-1 overflow-y-auto scrollbar-hide space-y-5 perf-scroll-region">
         {categoryOrder.map((category) => {
           const items = grouped[category];
           if (!items || items.length === 0) return null;
           return (
-            <div key={category}>
+            <section key={category} className="perf-section">
               <h2 className="text-[13px] font-medium text-foreground/40 uppercase tracking-wider mb-2">
                 {categoryLabels[category]}
               </h2>
@@ -49,12 +50,12 @@ export function DeviceList({ onSelectDevice }: DeviceListProps) {
                   <DeviceTile
                     key={device.id}
                     device={device}
-                    onToggle={() => toggleDevice(device.id)}
-                    onSelect={() => onSelectDevice(device.id)}
+                    onToggle={toggleDevice}
+                    onSelect={onSelectDevice}
                   />
                 ))}
               </div>
-            </div>
+            </section>
           );
         })}
       </div>

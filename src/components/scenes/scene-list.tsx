@@ -1,10 +1,11 @@
 "use client";
 
-import { useSmartHome } from "@/hooks/use-smart-home";
+import { useSmartHomeActions, useSmartHomeStaticData } from "@/hooks/use-smart-home";
 import { SceneTile } from "./scene-tile";
 
 export function SceneList() {
-  const { scenes, activateScene } = useSmartHome();
+  const { scenes } = useSmartHomeStaticData();
+  const { activateScene } = useSmartHomeActions();
 
   return (
     <div className="h-full flex flex-col">

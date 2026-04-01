@@ -1,12 +1,12 @@
 "use client";
 
-import { useSmartHome } from "@/hooks/use-smart-home";
+import { useSmartHomeActions } from "@/hooks/use-smart-home";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import type { Device } from "@/types";
 
 export function ClimateControl({ device }: { device: Device }) {
-  const { toggleDevice, setDeviceValue, setDeviceTemperature } = useSmartHome();
+  const { toggleDevice, setDeviceValue, setDeviceTemperature } = useSmartHomeActions();
 
   if (device.type === "thermostat") {
     return (

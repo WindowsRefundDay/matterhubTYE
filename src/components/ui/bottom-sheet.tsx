@@ -1,6 +1,5 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/icon";
 
@@ -12,48 +11,48 @@ interface BottomSheetProps {
   className?: string;
 }
 
-export function BottomSheet({ open, onClose, title, children, className }: BottomSheetProps) {
+export function BottomSheet({
+  open,
+  onClose,
+  title,
+  children,
+  className,
+}: BottomSheetProps) {
   return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="absolute inset-0 bg-black/50 z-40"
-            onPointerDown={onClose}
-          />
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className={cn(
-              "absolute bottom-0 left-0 right-0 z-50 rounded-t-2xl",
-              "bg-surface border-t border-border/50",
-              "max-h-[85%] overflow-hidden flex flex-col",
-              className
-            )}
-          >
-            {title && (
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
-                <h2 className="text-[16px] font-medium text-foreground">{title}</h2>
-                <button
-                  onPointerDown={onClose}
-                  className="p-1 rounded-full text-foreground/40 hover:text-foreground/60 active:scale-90 transition-transform"
-                >
-                  <Icon name="x" size={20} />
-                </button>
-              </div>
-            )}
-            <div className="flex-1 overflow-y-auto scrollbar-hide p-5">
-              {children}
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+    <>
+      <div
+        className={cn(
+          "absolute inset-0 z-40 bg-black/50 transition-opacity duration-150 perf-panel",
+          open ? "opacity-100" : "pointer-events-none opacity-0"
+        )}
+        onPointerDown={open ? onClose : undefined}
+      />
+
+      <div
+        className={cn(
+          "absolute bottom-0 left-0 right-0 z-50 flex max-h-[85%] flex-col overflow-hidden rounded-t-2xl border-t border-border/50 bg-surface",
+          "transition-[transform,opacity] duration-200 ease-out perf-panel",
+          open
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-full opacity-0",
+          className
+        )}
+      >
+        {title && (
+          <div className="flex items-center justify-between border-b border-border/30 px-5 py-4">
+            <h2 className="text-[16px] font-medium text-foreground">{title}</h2>
+            <button
+              onPointerDown={onClose}
+              className="rounded-full p-1 text-foreground/40 transition-[transform,color] hover:text-foreground/60 active:scale-90"
+            >
+              <Icon name="x" size={20} />
+            </button>
+          </div>
+        )}
+        <div className="flex-1 overflow-y-auto scrollbar-hide p-5 perf-scroll-region">
+          {children}
+        </div>
+      </div>
+    </>
   );
 }
