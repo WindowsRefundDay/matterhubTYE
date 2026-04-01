@@ -99,10 +99,14 @@ export function NavLayer({ currentScreen, onSelect }: NavLayerProps) {
       {/* Curved top edge */}
       <div className="absolute inset-x-0 top-0 h-full overflow-hidden">
         <div
-          className="absolute inset-x-[-10%] top-0 bottom-0 bg-surface/85 backdrop-blur-2xl border-t border-border/30"
+          className="absolute inset-x-[-10%] top-0 bottom-0 bg-surface/85 backdrop-blur-lg border-t border-border/30"
           style={{
             borderTopLeftRadius: "50% 44px",
             borderTopRightRadius: "50% 44px",
+            willChange: "transform",
+            transform: "translateZ(0)",
+            isolation: "isolate",
+            zIndex: 0,
           }}
         />
       </div>

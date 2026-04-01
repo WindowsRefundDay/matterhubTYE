@@ -11,7 +11,7 @@ export function AmbientClock() {
         <span className="text-[120px] leading-none font-extralight tracking-tight text-foreground tabular-nums">
           {time.hours}
         </span>
-        <span className="text-[120px] leading-none font-extralight tracking-tight text-foreground/40 animate-pulse">
+        <span className="text-[120px] leading-none font-extralight tracking-tight text-foreground/40 animate-pulse" style={{ willChange: "opacity", transform: "translateZ(0)" }}>
           :
         </span>
         <span className="text-[120px] leading-none font-extralight tracking-tight text-foreground tabular-nums">
