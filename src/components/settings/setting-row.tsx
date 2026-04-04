@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useTap } from "@/hooks/use-tap";
 
 interface SettingRowProps {
   label: string;
@@ -12,6 +13,7 @@ interface SettingRowProps {
 }
 
 export function SettingRow({ label, description, value, toggle, isOn, onToggle }: SettingRowProps) {
+  const tap = useTap(() => onToggle?.());
   return (
     <div className="flex items-center justify-between py-3">
       <div className="flex-1 min-w-0">
@@ -22,7 +24,7 @@ export function SettingRow({ label, description, value, toggle, isOn, onToggle }
       </div>
       {toggle ? (
         <button
-          onPointerDown={onToggle}
+          {...tap}
           className={cn(
             "w-10 h-5 rounded-full relative shrink-0 transition-colors",
             isOn ? "bg-accent" : "bg-surface-raised"

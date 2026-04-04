@@ -5,61 +5,75 @@ import { Icon } from "@/components/ui/icon";
 import { SettingRow } from "./setting-row";
 import { useSmartHomeRuntime } from "@/hooks/use-smart-home";
 import { cn } from "@/lib/utils";
+import { useTap } from "@/hooks/use-tap";
+import { WifiPanel } from "./wifi-panel";
+import { DisplayPanel } from "./display-panel";
 
-type WifiNetwork = { ssid: string; signal: number; security: string };
-type WifiStatus = { state: string; connection: string | null; networks: WifiNetwork[] };
+type WifiSummary = { wifiEnabled: boolean; wlanState: string; wlanConnection: string | null; ethState: string };
+type DisplaySummary = { supported: boolean; screenOn: boolean; brightnessPercent: number; autoSleepEnabled: boolean; idleTimeoutSeconds: number };
 
 export function SettingsPanel() {
-  const [autoSleep, setAutoSleep] = useState(true);
   const [notifications, setNotifications] = useState(true);
   const [darkMode] = useState(true);
+  const [wifiView, setWifiView] = useState(false);
+  const [displayView, setDisplayView] = useState(false);
   const { backendMode, backendStatus, diagnostics, errorMessage, lastSyncAt } =
     useSmartHomeRuntime();
 
-  // WiFi state
-  const [wifiStatus, setWifiStatus] = useState<WifiStatus | null>(null);
-  const [wifiOpen, setWifiOpen] = useState(false);
-  const [selectedSsid, setSelectedSsid] = useState("");
-  const [wifiPassword, setWifiPassword] = useState("");
-  const [wifiSaving, setWifiSaving] = useState(false);
-  const [wifiError, setWifiError] = useState<string | null>(null);
-  const [wifiSuccess, setWifiSuccess] = useState(false);
+  // Lightweight Wi-Fi summary for the settings row
+  const [wifiSummary, setWifiSummary] = useState<WifiSummary | null>(null);
+  const [displaySummary, setDisplaySummary] = useState<DisplaySummary | null>(null);
 
-  const fetchWifiStatus = useCallback(async () => {
+  const fetchWifiSummary = useCallback(async () => {
     try {
       const res = await fetch("/api/system/wifi");
-      if (res.ok) setWifiStatus(await res.json());
+      if (res.ok) setWifiSummary(await res.json());
+    } catch { /* non-critical */ }
+  }, []);
+
+  const fetchDisplaySummary = useCallback(async () => {
+    try {
+      const res = await fetch("/api/system/display", { cache: "no-store" });
+      if (res.ok) setDisplaySummary(await res.json());
     } catch {
-      // non-critical
+      /* non-critical */
     }
   }, []);
 
   useEffect(() => {
-    fetchWifiStatus();
-  }, [fetchWifiStatus]);
+    const initialRefresh = window.setTimeout(() => {
+      void fetchWifiSummary();
+      void fetchDisplaySummary();
+    }, 0);
 
-  async function connectWifi() {
-    if (!selectedSsid) return;
-    setWifiSaving(true);
-    setWifiError(null);
-    setWifiSuccess(false);
-    try {
-      const res = await fetch("/api/system/wifi", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ssid: selectedSsid, password: wifiPassword || undefined }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to connect");
-      setWifiSuccess(true);
-      setWifiPassword("");
-      await fetchWifiStatus();
-    } catch (err) {
-      setWifiError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setWifiSaving(false);
+    return () => {
+      window.clearTimeout(initialRefresh);
+    };
+  }, [fetchDisplaySummary, fetchWifiSummary]);
+
+  // Refresh summaries when returning from sub-panels
+  useEffect(() => {
+    if (!wifiView) {
+      const refresh = window.setTimeout(() => {
+        void fetchWifiSummary();
+      }, 0);
+      return () => window.clearTimeout(refresh);
     }
-  }
+    return;
+  }, [wifiView, fetchWifiSummary]);
+
+  useEffect(() => {
+    if (!displayView) {
+      const refresh = window.setTimeout(() => {
+        void fetchDisplaySummary();
+      }, 0);
+      return () => window.clearTimeout(refresh);
+    }
+    return;
+  }, [displayView, fetchDisplaySummary]);
+
+  const wifiTap = useTap(() => setWifiView(true));
+  const displayTap = useTap(() => setDisplayView(true));
 
   const statusSummary = useMemo(() => {
     if (backendMode === "home-assistant" && backendStatus === "ok") {
@@ -139,8 +153,40 @@ export function SettingsPanel() {
     return alerts;
   }, [backendMode, diagnostics.length]);
 
+  // ── Wi-Fi sub-page ──
+  if (wifiView) {
+    return <WifiPanel onBack={() => setWifiView(false)} />;
+  }
+
+  if (displayView) {
+    return <DisplayPanel onBack={() => setDisplayView(false)} />;
+  }
+
+  // ── Wi-Fi summary for the row ──
+  let displaySubtitle = "Loading...";
+  if (displaySummary) {
+    if (!displaySummary.supported) {
+      displaySubtitle = "Unavailable";
+    } else if (!displaySummary.screenOn) {
+      displaySubtitle = "Screen off";
+    } else {
+      displaySubtitle = `${displaySummary.brightnessPercent}% · ${displaySummary.autoSleepEnabled ? `${displaySummary.idleTimeoutSeconds}s sleep` : "sleep off"}`;
+    }
+  }
+
+  let wifiSubtitle = "Loading...";
+  if (wifiSummary) {
+    if (!wifiSummary.wifiEnabled) {
+      wifiSubtitle = "Off";
+    } else if (wifiSummary.wlanState === "connected" && wifiSummary.wlanConnection) {
+      wifiSubtitle = wifiSummary.wlanConnection;
+    } else {
+      wifiSubtitle = "Not connected";
+    }
+  }
+
   return (
-    <div className="relative flex h-full flex-col">
+    <div className="flex h-full flex-col">
       <h1 className="mb-4 text-[20px] font-medium text-foreground">Settings</h1>
       <div className="perf-scroll-region flex-1 space-y-5 overflow-y-auto scrollbar-hide">
         <div className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${statusSummary.tone}`}>
@@ -176,6 +222,40 @@ export function SettingsPanel() {
           </div>
         )}
 
+        {/* ── Network & internet row (Android-style) ── */}
+        <Section title="Network & internet">
+          <button
+            {...wifiTap}
+            className="flex w-full items-center gap-4 py-3.5 text-left"
+          >
+            <div className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-full",
+              wifiSummary?.wifiEnabled ? "bg-accent/15 text-accent" : "bg-surface-raised text-foreground/30"
+            )}>
+              <Icon name={wifiSummary?.wifiEnabled ? "wifi" : "wifi-off"} size={20} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-medium text-foreground">Wi-Fi</p>
+              <p className="text-[12px] text-foreground/40">{wifiSubtitle}</p>
+            </div>
+            <Icon name="chevron-right" size={16} className="text-foreground/25" />
+          </button>
+          <div className="flex items-center gap-4 py-3.5">
+            <div className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-full",
+              wifiSummary?.ethState === "connected" ? "bg-emerald-500/15 text-emerald-400" : "bg-surface-raised text-foreground/30"
+            )}>
+              <Icon name="ethernet" size={20} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-medium text-foreground">Ethernet</p>
+              <p className="text-[12px] text-foreground/40">
+                {wifiSummary?.ethState === "connected" ? "Connected" : "Not connected"}
+              </p>
+            </div>
+          </div>
+        </Section>
+
         <Section title="Appearance">
           <SettingRow label="Dark Mode" description="Always on for ambient display" toggle isOn={darkMode} />
           <SettingRow label="Accent Color" value="Amber" />
@@ -183,39 +263,27 @@ export function SettingsPanel() {
         </Section>
 
         <Section title="Display">
-          <SettingRow label="Auto Sleep" description="Dim after 5 minutes" toggle isOn={autoSleep} onToggle={() => setAutoSleep(!autoSleep)} />
-          <SettingRow label="Brightness" value="80%" />
-          <SettingRow label="Idle Timeout" value="30 seconds" />
+          <button
+            {...displayTap}
+            className="flex w-full items-center gap-4 py-3.5 text-left"
+          >
+            <div className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-full",
+              displaySummary?.screenOn ? "bg-accent/15 text-accent" : "bg-surface-raised text-foreground/30"
+            )}>
+              <Icon name="power" size={20} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-medium text-foreground">Screen & brightness</p>
+              <p className="text-[12px] text-foreground/40">{displaySubtitle}</p>
+            </div>
+            <Icon name="chevron-right" size={16} className="text-foreground/25" />
+          </button>
+          <SettingRow label="Resolution" value="800 x 480" />
         </Section>
 
         <Section title="Notifications">
           <SettingRow label="Show Alerts" description="Motion, door events" toggle isOn={notifications} onToggle={() => setNotifications(!notifications)} />
-        </Section>
-
-        <Section title="Wi-Fi">
-          <SettingRow
-            label="Status"
-            value={
-              wifiStatus
-                ? wifiStatus.state === "connected"
-                  ? `Connected — ${wifiStatus.connection}`
-                  : wifiStatus.state
-                : "Loading…"
-            }
-          />
-          <div className="py-3">
-            <button
-              onPointerDown={() => {
-                setWifiOpen(true);
-                setWifiError(null);
-                setWifiSuccess(false);
-                fetchWifiStatus();
-              }}
-              className="w-full rounded-xl bg-surface-raised px-4 py-2.5 text-left text-[13px] font-medium text-foreground/80 hover:bg-surface-raised/80"
-            >
-              Configure Wi-Fi network…
-            </button>
-          </div>
         </Section>
 
         <Section title="System">
@@ -231,91 +299,6 @@ export function SettingsPanel() {
           <SettingRow label="Resolution" value="800 x 480" />
         </Section>
       </div>
-
-      {/* Wi-Fi configuration modal */}
-      {wifiOpen && (
-        <div className="absolute inset-0 z-50 flex items-end justify-center bg-black/60 pb-4">
-          <div className="w-full max-w-sm rounded-2xl border border-border/20 bg-surface px-5 py-5 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold text-foreground">Configure Wi-Fi</h3>
-              <button
-                onPointerDown={() => { setWifiOpen(false); setWifiError(null); setWifiSuccess(false); }}
-                className="text-foreground/40 hover:text-foreground/70"
-              >
-                <Icon name="x" size={18} />
-              </button>
-            </div>
-
-            {/* Network list */}
-            {wifiStatus && wifiStatus.networks.length > 0 ? (
-              <div className="mb-3 max-h-40 overflow-y-auto rounded-xl border border-border/20 divide-y divide-border/10">
-                {wifiStatus.networks.map((n) => (
-                  <button
-                    key={n.ssid}
-                    onPointerDown={() => { setSelectedSsid(n.ssid); setWifiPassword(""); setWifiError(null); setWifiSuccess(false); }}
-                    className={cn(
-                      "flex w-full items-center justify-between px-3 py-2.5 text-left text-[13px] transition-colors",
-                      selectedSsid === n.ssid
-                        ? "bg-accent/20 text-foreground"
-                        : "text-foreground/70 hover:bg-surface-raised"
-                    )}
-                  >
-                    <span className="font-medium">{n.ssid}</span>
-                    <span className="flex items-center gap-1.5 text-foreground/40">
-                      {n.security && <Icon name="lock" size={12} />}
-                      <span>{n.signal}%</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="mb-3 text-[12px] text-foreground/40">
-                {wifiStatus ? "No networks found nearby." : "Scanning…"}
-              </p>
-            )}
-
-            {/* Manual SSID entry */}
-            <input
-              type="text"
-              placeholder="SSID (network name)"
-              value={selectedSsid}
-              onChange={(e) => setSelectedSsid(e.target.value)}
-              className="mb-2 w-full rounded-xl border border-border/20 bg-surface-raised px-3 py-2.5 text-[13px] text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-accent"
-            />
-            <input
-              type="password"
-              placeholder="Password (leave blank for open networks)"
-              value={wifiPassword}
-              onChange={(e) => setWifiPassword(e.target.value)}
-              className="mb-3 w-full rounded-xl border border-border/20 bg-surface-raised px-3 py-2.5 text-[13px] text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-accent"
-            />
-
-            {wifiError && (
-              <p className="mb-2 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-[12px] text-red-300">
-                {wifiError}
-              </p>
-            )}
-            {wifiSuccess && (
-              <p className="mb-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[12px] text-emerald-300">
-                Connected successfully.
-              </p>
-            )}
-
-            <button
-              onPointerDown={connectWifi}
-              disabled={wifiSaving || !selectedSsid}
-              className={cn(
-                "w-full rounded-xl px-4 py-2.5 text-[13px] font-semibold transition-colors",
-                wifiSaving || !selectedSsid
-                  ? "bg-surface-raised text-foreground/30"
-                  : "bg-accent text-white hover:bg-accent/80"
-              )}
-            >
-              {wifiSaving ? "Connecting…" : "Connect"}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

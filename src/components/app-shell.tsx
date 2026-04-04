@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   useSmartHomeActions,
   useSmartHomeAppState,
@@ -21,6 +21,22 @@ import { DeviceControl } from "./devices/device-control";
 import { Icon } from "./ui/icon";
 import type { Screen } from "@/types";
 
+interface DisplayControlState {
+  supported: boolean;
+  screenOn: boolean;
+  brightnessPercent: number;
+  autoSleepEnabled: boolean;
+  idleTimeoutSeconds: number;
+}
+
+const DEFAULT_DISPLAY_STATE: DisplayControlState = {
+  supported: false,
+  screenOn: true,
+  brightnessPercent: 100,
+  autoSleepEnabled: true,
+  idleTimeoutSeconds: 30,
+};
+
 export function AppShell() {
   const appState = useSmartHomeAppState();
   const { weather, rooms } = useSmartHomeStaticData();
@@ -34,21 +50,87 @@ export function AppShell() {
     goHome,
   } = useSmartHomeActions();
 
+  const [displayState, setDisplayState] = useState<DisplayControlState>(DEFAULT_DISPLAY_STATE);
   const { mode, screen, selectedRoomId, selectedDeviceId } = appState;
   const ambientVisible = mode === "ambient" || mode === "nav";
   const screenVisible = mode === "screen" || mode === "detail";
 
-  const handleIdle = useCallback(() => {
-    goHome();
-  }, [goHome]);
+  const fetchDisplayState = useCallback(async () => {
+    try {
+      const response = await fetch("/api/system/display", { cache: "no-store" });
+      if (!response.ok) {
+        return;
+      }
+      const payload = (await response.json()) as DisplayControlState;
+      setDisplayState(payload);
+    } catch {
+      // non-critical; preserve the last known display state
+    }
+  }, []);
 
-  useIdleTimer(handleIdle, 30000);
+  const setDisplayPower = useCallback(async (on: boolean) => {
+    try {
+      const response = await fetch("/api/system/display", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: "set_power", on }),
+      });
+
+      if (response.ok) {
+        const payload = (await response.json()) as DisplayControlState;
+        setDisplayState(payload);
+      }
+    } catch {
+      // ignore and preserve current state
+    }
+  }, []);
+
+  useEffect(() => {
+    const initialRefresh = window.setTimeout(() => {
+      void fetchDisplayState();
+    }, 0);
+
+    const interval = window.setInterval(() => {
+      void fetchDisplayState();
+    }, 10000);
+
+    return () => {
+      window.clearTimeout(initialRefresh);
+      window.clearInterval(interval);
+    };
+  }, [fetchDisplayState]);
 
   const handleAmbientTap = useCallback(() => {
+    if (displayState.supported && !displayState.screenOn) {
+      void setDisplayPower(true);
+      return;
+    }
+
     if (mode === "ambient") {
       setMode("nav");
     }
-  }, [mode, setMode]);
+  }, [displayState.screenOn, displayState.supported, mode, setDisplayPower, setMode]);
+
+  const handleSleep = useCallback(() => {
+    if (displayState.supported && displayState.autoSleepEnabled && displayState.screenOn) {
+      void setDisplayPower(false);
+    }
+  }, [displayState.autoSleepEnabled, displayState.screenOn, displayState.supported, setDisplayPower]);
+
+  const handleIdleHome = useCallback(() => {
+    goHome();
+  }, [goHome]);
+
+  useIdleTimer(handleIdleHome, 30000);
+  useIdleTimer(handleSleep, displayState.idleTimeoutSeconds * 1000);
+
+  const handleWakeTap = useCallback(() => {
+    if (displayState.supported && !displayState.screenOn) {
+      void setDisplayPower(true);
+    }
+  }, [displayState.screenOn, displayState.supported, setDisplayPower]);
 
   const handleNavSelect = useCallback(
     (nextScreen: Screen) => {
@@ -135,6 +217,19 @@ export function AppShell() {
       >
         {selectedDevice && <DeviceControl device={selectedDevice} />}
       </BottomSheet>
+
+      {displayState.supported && !displayState.screenOn && (
+        <button
+          type="button"
+          aria-label="Wake display"
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            handleWakeTap();
+          }}
+          className="absolute inset-0 z-50 bg-black"
+        />
+      )}
     </DeviceFrame>
   );
 }
