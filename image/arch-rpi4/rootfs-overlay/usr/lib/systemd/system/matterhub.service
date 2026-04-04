@@ -1,0 +1,20 @@
+[Unit]
+Description=MatterHub standalone server
+After=network-online.target homeassistant.service matterhub-firstboot.service
+Wants=network-online.target homeassistant.service
+
+[Service]
+Type=simple
+User=matterhub
+Group=matterhub
+WorkingDirectory=/opt/matterhub
+Environment=NODE_ENV=production
+Environment=HOSTNAME=127.0.0.1
+Environment=PORT=3000
+EnvironmentFile=-/run/matterhub/boot-mode.env
+ExecStart=/usr/bin/node /opt/matterhub/server.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

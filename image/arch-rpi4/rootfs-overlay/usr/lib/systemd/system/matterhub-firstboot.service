@@ -1,0 +1,13 @@
+[Unit]
+Description=MatterHub boot-mode controller
+DefaultDependencies=no
+After=local-fs.target systemd-tmpfiles-setup.service matterhub-bootstrapd.service
+Before=multi-user.target graphical.target matterhub.service matterhub-kiosk.service
+Wants=systemd-tmpfiles-setup.service matterhub-bootstrapd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/matterhub/firstboot-mode.sh
+
+[Install]
+WantedBy=multi-user.target

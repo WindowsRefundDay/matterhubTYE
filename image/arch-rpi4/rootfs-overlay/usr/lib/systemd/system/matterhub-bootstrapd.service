@@ -1,0 +1,12 @@
+[Unit]
+Description=MatterHub privileged bootstrap boundary
+After=local-fs.target systemd-tmpfiles-setup.service iwd.service systemd-networkd.service
+Wants=systemd-tmpfiles-setup.service iwd.service systemd-networkd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/lib/matterhub/bootstrapd.sh ensure-runtime
+
+[Install]
+WantedBy=multi-user.target
