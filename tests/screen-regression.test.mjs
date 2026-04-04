@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  renderCompiled,
-  renderCompiledWithProvider,
-} from "./test-helpers.mjs";
+import { renderCompiledWithProvider } from "./test-helpers.mjs";
 
 test("ScreenRenderer preserves panel routing for key screens", async () => {
   const sharedProps = {
@@ -26,7 +23,7 @@ test("ScreenRenderer preserves panel routing for key screens", async () => {
     "ScreenRenderer",
     { ...sharedProps, screen: "scenes" }
   );
-  const settingsHtml = await renderCompiled(
+  const settingsHtml = await renderCompiledWithProvider(
     "components/screen-renderer",
     "ScreenRenderer",
     { ...sharedProps, screen: "settings" }
@@ -56,7 +53,7 @@ test("RoomList preserves active-count summaries for every room", async () => {
 });
 
 test("SettingsPanel preserves the appliance status summary block", async () => {
-  const html = await renderCompiled(
+  const html = await renderCompiledWithProvider(
     "components/settings/settings-panel",
     "SettingsPanel"
   );

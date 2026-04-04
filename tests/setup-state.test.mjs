@@ -2,15 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-
-async function importCompiled(modulePath) {
-  return import(new URL(`../.tmp-test/src/${modulePath}.js`, import.meta.url));
-}
+import { importCompiled, renderCompiledWithProvider } from "./test-helpers.mjs";
 
 test("SettingsPanel surfaces truthful setup and demo state messaging", async () => {
-  const { SettingsPanel } = await importCompiled("components/settings/settings-panel");
-
-  const html = renderToStaticMarkup(React.createElement(SettingsPanel));
+  const html = await renderCompiledWithProvider(
+    "components/settings/settings-panel",
+    "SettingsPanel"
+  );
 
   assert.match(html, /Awaiting appliance provisioning/);
   assert.match(html, /Demo fixtures still active/);
