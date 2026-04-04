@@ -33,6 +33,13 @@ require_file() {
   pass "found file $path"
 }
 
+require_executable() {
+  local path="$1"
+  require_file "$path"
+  [[ -x "$path" ]] || fail "path is not executable: $path"
+  pass "path is executable $path"
+}
+
 require_dir() {
   local path="$1"
   [[ -d "$path" ]] || fail "missing directory: $path"
@@ -74,15 +81,15 @@ done
 
 if [[ -n "$REPO_ROOT" ]]; then
   manifest="$REPO_ROOT/image/arch-rpi4/packages/pacman-packages.txt"
-  require_file "$REPO_ROOT/image/arch-rpi4/build-image.sh"
+  require_executable "$REPO_ROOT/image/arch-rpi4/build-image.sh"
   require_file "$REPO_ROOT/image/arch-rpi4/README.md"
   require_file "$REPO_ROOT/image/arch-rpi4/profiles/$PROFILE/boot/config.txt.fragment"
   require_file "$REPO_ROOT/image/arch-rpi4/profiles/$PROFILE/README.md"
   require_file "$manifest"
-  require_file "$REPO_ROOT/image/arch-rpi4/rootfs-overlay/usr/local/lib/matterhub/bootstrapd.sh"
-  require_file "$REPO_ROOT/image/arch-rpi4/rootfs-overlay/usr/local/lib/matterhub/firstboot-mode.sh"
-  require_file "$REPO_ROOT/image/arch-rpi4/rootfs-overlay/usr/local/lib/matterhub/verify-display.sh"
-  require_file "$REPO_ROOT/image/arch-rpi4/rootfs-overlay/usr/local/lib/matterhub/healthcheck.sh"
+  require_executable "$REPO_ROOT/image/arch-rpi4/rootfs-overlay/usr/local/lib/matterhub/bootstrapd.sh"
+  require_executable "$REPO_ROOT/image/arch-rpi4/rootfs-overlay/usr/local/lib/matterhub/firstboot-mode.sh"
+  require_executable "$REPO_ROOT/image/arch-rpi4/rootfs-overlay/usr/local/lib/matterhub/verify-display.sh"
+  require_executable "$REPO_ROOT/image/arch-rpi4/rootfs-overlay/usr/local/lib/matterhub/healthcheck.sh"
   require_file "$REPO_ROOT/image/arch-rpi4/rootfs-overlay/usr/lib/systemd/system/matterhub.service"
   require_file "$REPO_ROOT/image/arch-rpi4/rootfs-overlay/usr/lib/systemd/system/matterhub-kiosk.service"
   require_file "$REPO_ROOT/image/arch-rpi4/rootfs-overlay/usr/lib/systemd/system/matterhub-firstboot.service"
