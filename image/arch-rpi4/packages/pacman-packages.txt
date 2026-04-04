@@ -4,10 +4,12 @@ linux-firmware
 raspberrypi-bootloader
 docker
 docker-compose
+nodejs
 cage
 chromium
 seatd
 iwd
 systemd-resolvconf
-networkmanager
+ca-certificates
+curl
 python

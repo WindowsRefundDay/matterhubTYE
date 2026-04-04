@@ -251,6 +251,7 @@ install_profile() {
   [[ -f "$PROFILE_FRAGMENT" ]] || fail "profile boot fragment missing: $PROFILE_FRAGMENT"
 
   run mkdir -p "$ROOT_MOUNT/usr/share/matterhub/profiles/$PROFILE" "$BOOT_MOUNT/matterhub/profiles/$PROFILE"
+  run rsync -a "$PROFILE_DIR/" "$ROOT_MOUNT/usr/share/matterhub/profiles/$PROFILE/"
   run cp "$PROFILE_FRAGMENT" "$ROOT_MOUNT/usr/share/matterhub/profiles/$PROFILE/config.txt.fragment"
   run cp "$PROFILE_FRAGMENT" "$BOOT_MOUNT/matterhub/profiles/$PROFILE/config.txt.fragment"
 
@@ -271,6 +272,11 @@ install_profile() {
 }
 
 write_metadata() {
+  if (( DRY_RUN )); then
+    log "would write build metadata to $BUILD_METADATA"
+    return 0
+  fi
+
   cat > "$BUILD_METADATA" <<EOF
 IMAGE_NAME=$IMAGE_NAME
 IMAGE_PATH=$RAW_IMAGE
