@@ -26,7 +26,14 @@ interface DisplayControlState {
   screenOn: boolean;
   brightnessPercent: number;
   autoSleepEnabled: boolean;
-  idleTimeoutSeconds: number;
+  dimAfterSeconds: number;
+  turnOffAfterSeconds: number;
+  preferredBrightnessPercent: number;
+  dimmedBrightnessPercent: number;
+  lastOnBrightnessPercent: number;
+  keepAwakeDuringDay: boolean;
+  dayStartsAt: string;
+  nightStartsAt: string;
 }
 
 const DEFAULT_DISPLAY_STATE: DisplayControlState = {
@@ -34,8 +41,38 @@ const DEFAULT_DISPLAY_STATE: DisplayControlState = {
   screenOn: true,
   brightnessPercent: 100,
   autoSleepEnabled: true,
-  idleTimeoutSeconds: 30,
+  dimAfterSeconds: 30,
+  turnOffAfterSeconds: 30,
+  preferredBrightnessPercent: 100,
+  dimmedBrightnessPercent: 15,
+  lastOnBrightnessPercent: 100,
+  keepAwakeDuringDay: false,
+  dayStartsAt: "07:00",
+  nightStartsAt: "22:00",
 };
+
+function parseClockMinutes(value: string) {
+  const [hoursRaw, minutesRaw] = value.split(":");
+  const hours = Number.parseInt(hoursRaw ?? "0", 10);
+  const minutes = Number.parseInt(minutesRaw ?? "0", 10);
+  return hours * 60 + minutes;
+}
+
+function isWithinDayWindow(dayStartsAt: string, nightStartsAt: string, now = new Date()) {
+  const start = parseClockMinutes(dayStartsAt);
+  const end = parseClockMinutes(nightStartsAt);
+  const current = now.getHours() * 60 + now.getMinutes();
+
+  if (start === end) {
+    return false;
+  }
+
+  if (start < end) {
+    return current >= start && current < end;
+  }
+
+  return current >= start || current < end;
+}
 
 export function AppShell() {
   const appState = useSmartHomeAppState();
@@ -51,6 +88,7 @@ export function AppShell() {
   } = useSmartHomeActions();
 
   const [displayState, setDisplayState] = useState<DisplayControlState>(DEFAULT_DISPLAY_STATE);
+  const [minuteTick, setMinuteTick] = useState(() => Date.now());
   const { mode, screen, selectedRoomId, selectedDeviceId } = appState;
   const ambientVisible = mode === "ambient" || mode === "nav";
   const screenVisible = mode === "screen" || mode === "detail";
@@ -72,10 +110,29 @@ export function AppShell() {
     try {
       const response = await fetch("/api/system/display", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "set_power", on }),
+      });
+
+      if (response.ok) {
+        const payload = (await response.json()) as DisplayControlState;
+        setDisplayState(payload);
+      }
+    } catch {
+      // ignore and preserve current state
+    }
+  }, []);
+
+  const setDisplayBrightness = useCallback(async (brightnessPercent: number) => {
+    try {
+      const response = await fetch("/api/system/display", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "set_brightness",
+          brightnessPercent,
+          persist: false,
+        }),
       });
 
       if (response.ok) {
@@ -96,11 +153,122 @@ export function AppShell() {
       void fetchDisplayState();
     }, 10000);
 
+    const minuteInterval = window.setInterval(() => {
+      setMinuteTick(Date.now());
+    }, 60000);
+
     return () => {
       window.clearTimeout(initialRefresh);
       window.clearInterval(interval);
+      window.clearInterval(minuteInterval);
     };
   }, [fetchDisplayState]);
+
+  const withinDayWindow = useMemo(
+    () =>
+      displayState.keepAwakeDuringDay &&
+      isWithinDayWindow(displayState.dayStartsAt, displayState.nightStartsAt, new Date(minuteTick)),
+    [displayState.dayStartsAt, displayState.keepAwakeDuringDay, displayState.nightStartsAt, minuteTick]
+  );
+
+  const isDimmed =
+    displayState.screenOn &&
+    displayState.brightnessPercent > 0 &&
+    displayState.brightnessPercent <= displayState.dimmedBrightnessPercent;
+
+  useEffect(() => {
+    if (!displayState.supported) {
+      return;
+    }
+
+    if (withinDayWindow) {
+      const scheduleWake = window.setTimeout(() => {
+        if (!displayState.screenOn) {
+          void setDisplayPower(true);
+        } else if (
+          displayState.brightnessPercent !== displayState.preferredBrightnessPercent
+        ) {
+          void setDisplayBrightness(displayState.preferredBrightnessPercent);
+        }
+      }, 0);
+
+      return () => {
+        window.clearTimeout(scheduleWake);
+      };
+    }
+
+    if (!displayState.autoSleepEnabled) {
+      return;
+    }
+
+    let dimTimer: number | null = null;
+    let offTimer: number | null = null;
+
+    const armTimers = () => {
+      if (dimTimer) {
+        window.clearTimeout(dimTimer);
+      }
+      if (offTimer) {
+        window.clearTimeout(offTimer);
+      }
+
+      dimTimer = window.setTimeout(() => {
+        if (displayState.screenOn && !isDimmed) {
+          void setDisplayBrightness(displayState.dimmedBrightnessPercent);
+        }
+      }, displayState.dimAfterSeconds * 1000);
+
+      offTimer = window.setTimeout(() => {
+        if (displayState.screenOn) {
+          void setDisplayPower(false);
+        }
+      }, (displayState.dimAfterSeconds + displayState.turnOffAfterSeconds) * 1000);
+    };
+
+    const handleActivity = () => {
+      if (displayState.screenOn) {
+        if (isDimmed) {
+          void setDisplayBrightness(displayState.preferredBrightnessPercent);
+        }
+        armTimers();
+        return;
+      }
+
+      void setDisplayPower(true);
+      armTimers();
+    };
+
+    const events = ["pointerdown", "pointermove", "keydown"] as const;
+    events.forEach((eventName) =>
+      window.addEventListener(eventName, handleActivity, { passive: true })
+    );
+    armTimers();
+
+    return () => {
+      events.forEach((eventName) =>
+        window.removeEventListener(eventName, handleActivity)
+      );
+      if (dimTimer) {
+        window.clearTimeout(dimTimer);
+      }
+      if (offTimer) {
+        window.clearTimeout(offTimer);
+      }
+    };
+  }, [
+    displayState.autoSleepEnabled,
+    displayState.brightnessPercent,
+    displayState.dimAfterSeconds,
+    displayState.dimmedBrightnessPercent,
+    displayState.preferredBrightnessPercent,
+    displayState.screenOn,
+    displayState.supported,
+    displayState.turnOffAfterSeconds,
+    isDimmed,
+    setDisplayBrightness,
+    setDisplayPower,
+    withinDayWindow,
+  ]);
 
   const handleAmbientTap = useCallback(() => {
     if (displayState.supported && !displayState.screenOn) {
@@ -113,18 +281,11 @@ export function AppShell() {
     }
   }, [displayState.screenOn, displayState.supported, mode, setDisplayPower, setMode]);
 
-  const handleSleep = useCallback(() => {
-    if (displayState.supported && displayState.autoSleepEnabled && displayState.screenOn) {
-      void setDisplayPower(false);
-    }
-  }, [displayState.autoSleepEnabled, displayState.screenOn, displayState.supported, setDisplayPower]);
-
   const handleIdleHome = useCallback(() => {
     goHome();
   }, [goHome]);
 
   useIdleTimer(handleIdleHome, 30000);
-  useIdleTimer(handleSleep, displayState.idleTimeoutSeconds * 1000);
 
   const handleWakeTap = useCallback(() => {
     if (displayState.supported && !displayState.screenOn) {

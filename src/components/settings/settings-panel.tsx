@@ -10,7 +10,7 @@ import { WifiPanel } from "./wifi-panel";
 import { DisplayPanel } from "./display-panel";
 
 type WifiSummary = { wifiEnabled: boolean; wlanState: string; wlanConnection: string | null; ethState: string };
-type DisplaySummary = { supported: boolean; screenOn: boolean; brightnessPercent: number; autoSleepEnabled: boolean; idleTimeoutSeconds: number };
+type DisplaySummary = { supported: boolean; screenOn: boolean; brightnessPercent: number; autoSleepEnabled: boolean; dimAfterSeconds: number; turnOffAfterSeconds: number; keepAwakeDuringDay: boolean; dayStartsAt: string; nightStartsAt: string };
 
 export function SettingsPanel() {
   const [notifications, setNotifications] = useState(true);
@@ -170,7 +170,9 @@ export function SettingsPanel() {
     } else if (!displaySummary.screenOn) {
       displaySubtitle = "Screen off";
     } else {
-      displaySubtitle = `${displaySummary.brightnessPercent}% · ${displaySummary.autoSleepEnabled ? `${displaySummary.idleTimeoutSeconds}s sleep` : "sleep off"}`;
+      displaySubtitle = displaySummary.keepAwakeDuringDay
+        ? `${displaySummary.brightnessPercent}% · day awake ${displaySummary.dayStartsAt}–${displaySummary.nightStartsAt}`
+        : `${displaySummary.brightnessPercent}% · ${displaySummary.autoSleepEnabled ? `${displaySummary.dimAfterSeconds}s dim` : "sleep off"}`;
     }
   }
 
