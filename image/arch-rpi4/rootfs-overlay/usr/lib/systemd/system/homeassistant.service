@@ -1,0 +1,15 @@
+[Unit]
+Description=Home Assistant container
+After=network-online.target docker.service matterhub-bootstrapd.service
+Wants=network-online.target docker.service matterhub-bootstrapd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/matterhub/compose
+ExecStart=/usr/bin/docker compose -f /opt/matterhub/compose/homeassistant-compose.yml up -d
+ExecStop=/usr/bin/docker compose -f /opt/matterhub/compose/homeassistant-compose.yml down
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

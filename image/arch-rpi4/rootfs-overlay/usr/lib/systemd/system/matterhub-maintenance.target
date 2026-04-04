@@ -1,0 +1,4 @@
+[Unit]
+Description=MatterHub maintenance mode
+Requires=multi-user.target
+AllowIsolate=yes

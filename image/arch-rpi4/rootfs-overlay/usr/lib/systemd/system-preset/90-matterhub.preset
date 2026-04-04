@@ -1,0 +1,5 @@
+enable matterhub-bootstrapd.service
+enable matterhub-firstboot.service
+enable matterhub.service
+enable matterhub-kiosk.service
+enable homeassistant.service

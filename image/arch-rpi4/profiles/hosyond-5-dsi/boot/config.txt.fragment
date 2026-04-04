@@ -1,0 +1,8 @@
+# MatterHub HOSYOND 5-inch DSI baseline
+dtoverlay=vc4-kms-v3d
+max_framebuffers=2
+disable_overscan=1
+display_auto_detect=1
+framebuffer_width=800
+framebuffer_height=480
+dtparam=i2c_arm=on

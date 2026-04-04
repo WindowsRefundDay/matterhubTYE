@@ -1,0 +1,15 @@
+base
+linux-aarch64
+linux-firmware
+raspberrypi-bootloader
+docker
+docker-compose
+nodejs
+cage
+chromium
+seatd
+iwd
+systemd-resolvconf
+ca-certificates
+curl
+python
