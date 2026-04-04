@@ -36,7 +36,7 @@ Expected paths:
 
 - `.next/standalone/server.js`
 - `.next/static/`
-- `public/`
+- `public/` (optional; copied when present)
 
 ## Build usage
 

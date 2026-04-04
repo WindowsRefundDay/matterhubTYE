@@ -138,7 +138,6 @@ BUILD_METADATA="$OUTPUT_DIR/$IMAGE_NAME.build.env"
 [[ -f "$VERIFY_SCRIPT" ]] || fail "layout verifier missing: $VERIFY_SCRIPT"
 [[ -f "$APP_DIR/.next/standalone/server.js" ]] || fail "standalone build missing at $APP_DIR/.next/standalone/server.js"
 [[ -d "$APP_DIR/.next/static" ]] || fail "static assets missing at $APP_DIR/.next/static"
-[[ -d "$APP_DIR/public" ]] || fail "public assets missing at $APP_DIR/public"
 
 require_cmd bash
 require_cmd tar
@@ -245,6 +244,11 @@ install_overlay() {
 
   if (( DRY_RUN )); then
     log "would copy standalone bundle into /opt/matterhub"
+    if [[ -d "$APP_DIR/public" ]]; then
+      log "would copy public assets into /opt/matterhub/public"
+    else
+      log "no public directory found; continuing with an empty /opt/matterhub/public"
+    fi
   else
     mkdir -p \
       "$ROOT_MOUNT/opt/matterhub/.next" \
@@ -252,7 +256,9 @@ install_overlay() {
       "$ROOT_MOUNT/usr/share/matterhub/packages"
     rsync -a "$APP_DIR/.next/standalone/" "$ROOT_MOUNT/opt/matterhub/"
     rsync -a "$APP_DIR/.next/static/" "$ROOT_MOUNT/opt/matterhub/.next/static/"
-    rsync -a "$APP_DIR/public/" "$ROOT_MOUNT/opt/matterhub/public/"
+    if [[ -d "$APP_DIR/public" ]]; then
+      rsync -a "$APP_DIR/public/" "$ROOT_MOUNT/opt/matterhub/public/"
+    fi
     cp "$PACKAGES_FILE" "$ROOT_MOUNT/usr/share/matterhub/packages/pacman-packages.txt"
   fi
 }
