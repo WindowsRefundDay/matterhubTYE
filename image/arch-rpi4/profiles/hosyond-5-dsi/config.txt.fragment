@@ -1,0 +1,12 @@
+# MatterHub HOSYOND 5-inch DSI profile
+# Prefer mainline KMS first; keep vendor-specific overlays as an explicit follow-up.
+
+dtoverlay=vc4-kms-v3d
+max_framebuffers=2
+disable_fw_kms_setup=1
+disable_overscan=1
+# Prevent unexpected HDMI-only auto-detection from masking a failed DSI bring-up.
+display_auto_detect=0
+
+# Uncomment only after validating the exact panel SKU and overlay source.
+# dtoverlay=<validated-hosyond-overlay>

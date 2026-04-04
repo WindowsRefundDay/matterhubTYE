@@ -1,37 +1,24 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-
-async function importCompiled(modulePath) {
-  return import(new URL(`../.tmp-test/src/${modulePath}.js`, import.meta.url));
-}
+import {
+  importCompiled,
+  renderCompiled,
+  renderWithProvider,
+} from "./test-helpers.mjs";
 
 async function renderDeviceControl(device) {
-  const [{ SmartHomeProvider }, { DeviceControl }] = await Promise.all([
-    importCompiled("hooks/use-smart-home"),
-    importCompiled("components/devices/device-control"),
-  ]);
+  const { DeviceControl } = await importCompiled("components/devices/device-control");
 
-  return renderToStaticMarkup(
-    React.createElement(
-      SmartHomeProvider,
-      null,
-      React.createElement(DeviceControl, { device })
-    )
-  );
+  return renderWithProvider(React.createElement(DeviceControl, { device }));
 }
 
 async function renderDeviceTile(device) {
-  const { DeviceTile } = await importCompiled("components/devices/device-tile");
-
-  return renderToStaticMarkup(
-    React.createElement(DeviceTile, {
-      device,
-      onToggle: () => undefined,
-      onSelect: () => undefined,
-    })
-  );
+  return renderCompiled("components/devices/device-tile", "DeviceTile", {
+    device,
+    onToggle: () => undefined,
+    onSelect: () => undefined,
+  });
 }
 
 test("DeviceTile preserves per-device status text", async () => {

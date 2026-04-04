@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# OMX runtime artifacts
+.omx/logs/*.jsonl
+.omx/state/
+.omx/team/
+.playwright-cli/

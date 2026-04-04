@@ -1,0 +1,4 @@
+[Unit]
+Description=MatterHub maintenance mode
+Documentation=file:///usr/share/doc/matterhub/hosyond-5-dsi/README.md
+AllowIsolate=yes

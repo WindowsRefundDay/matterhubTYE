@@ -13,6 +13,8 @@ Open [http://localhost:3000](http://localhost:3000) to see the hub interface.
 
 For production Raspberry Pi deployment, build the standalone bundle with `npm run build` and launch it with `npm run start:standalone`. Deployment assets for `systemd` and `labwc` kiosk startup live in `deploy/raspberry-pi/README.md`.
 
+For the approved Arch Linux ARM appliance direction, see `docs/arch-rpi4-appliance.md`, the review notes in `docs/arch-rpi4-code-review.md`, and the preview setup/maintenance routes at `/setup` and `/maintenance` during local development.
+
 ## Architecture
 
 - **Ambient mode**: Large clock + weather + status — the idle state
