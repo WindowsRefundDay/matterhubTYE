@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 OVERLAY_DIR="$SCRIPT_DIR/rootfs-overlay"
 PACKAGES_FILE="$SCRIPT_DIR/packages/pacman-packages.txt"
+VERIFY_SCRIPT="$SCRIPT_DIR/verify-layout.sh"
 DEFAULT_PROFILE="hosyond-5-dsi"
 DEFAULT_IMAGE_SIZE_GB=6
 DEFAULT_TARBALL_URL="https://os.archlinuxarm.org/os/ArchLinuxARM-rpi-aarch64-latest.tar.gz"
@@ -134,6 +135,7 @@ BUILD_METADATA="$OUTPUT_DIR/$IMAGE_NAME.build.env"
 [[ -d "$PROFILE_DIR" ]] || fail "profile not found: $PROFILE"
 [[ -d "$OVERLAY_DIR" ]] || fail "rootfs overlay missing: $OVERLAY_DIR"
 [[ -f "$PACKAGES_FILE" ]] || fail "package manifest missing: $PACKAGES_FILE"
+[[ -f "$VERIFY_SCRIPT" ]] || fail "layout verifier missing: $VERIFY_SCRIPT"
 [[ -f "$APP_DIR/.next/standalone/server.js" ]] || fail "standalone build missing at $APP_DIR/.next/standalone/server.js"
 [[ -d "$APP_DIR/.next/static" ]] || fail "static assets missing at $APP_DIR/.next/static"
 [[ -d "$APP_DIR/public" ]] || fail "public assets missing at $APP_DIR/public"
@@ -184,6 +186,10 @@ trap cleanup EXIT
 
 prepare_dirs() {
   run mkdir -p "$OUTPUT_DIR" "$WORK_DIR" "$BOOT_MOUNT" "$ROOT_MOUNT" "$STAGING_BOOT"
+}
+
+verify_repo_layout() {
+  "$VERIFY_SCRIPT" --repo-root "$REPO_ROOT" --profile "$PROFILE"
 }
 
 resolve_tarball() {
@@ -240,10 +246,14 @@ install_overlay() {
   if (( DRY_RUN )); then
     log "would copy standalone bundle into /opt/matterhub"
   else
-    mkdir -p "$ROOT_MOUNT/opt/matterhub/.next" "$ROOT_MOUNT/opt/matterhub/public"
+    mkdir -p \
+      "$ROOT_MOUNT/opt/matterhub/.next" \
+      "$ROOT_MOUNT/opt/matterhub/public" \
+      "$ROOT_MOUNT/usr/share/matterhub/packages"
     rsync -a "$APP_DIR/.next/standalone/" "$ROOT_MOUNT/opt/matterhub/"
     rsync -a "$APP_DIR/.next/static/" "$ROOT_MOUNT/opt/matterhub/.next/static/"
     rsync -a "$APP_DIR/public/" "$ROOT_MOUNT/opt/matterhub/public/"
+    cp "$PACKAGES_FILE" "$ROOT_MOUNT/usr/share/matterhub/packages/pacman-packages.txt"
   fi
 }
 
@@ -303,6 +313,7 @@ compress_image() {
 }
 
 log "profile=$PROFILE image=$RAW_IMAGE dry_run=$DRY_RUN"
+verify_repo_layout
 prepare_dirs
 resolve_tarball
 create_partitions
@@ -310,6 +321,9 @@ attach_loop
 extract_rootfs
 install_overlay
 install_profile
+if (( ! DRY_RUN )); then
+  "$VERIFY_SCRIPT" --staged-root "$ROOT_MOUNT" --profile "$PROFILE"
+fi
 write_metadata
 compress_image
 log "image pipeline complete"

@@ -60,6 +60,20 @@ sudo image/arch-rpi4/build-image.sh \
 - Compressed image: `dist/image/matterhub-arch-rpi4.img.xz`
 - Build metadata: `dist/image/matterhub-arch-rpi4.build.env`
 
+## Verification helpers
+
+Validate the repo-side image layout before building:
+
+```bash
+image/arch-rpi4/verify-layout.sh --repo-root "$PWD"
+```
+
+Runtime health summary on device:
+
+```bash
+/usr/local/lib/matterhub/healthcheck.sh
+```
+
 ## Runtime layout
 
 Installed services:
