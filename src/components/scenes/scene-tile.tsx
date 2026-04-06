@@ -3,6 +3,7 @@
 import { memo } from "react";
 import { Icon } from "@/components/ui/icon";
 import type { Scene } from "@/types";
+import { useTap } from "@/hooks/use-tap";
 
 interface SceneTileProps {
   scene: Scene;
@@ -13,9 +14,11 @@ export const SceneTile = memo(function SceneTile({
   scene,
   onActivate,
 }: SceneTileProps) {
+  const tap = useTap(() => onActivate(scene.id));
+
   return (
     <button
-      onPointerDown={() => onActivate(scene.id)}
+      {...tap}
       className="flex flex-col gap-3 rounded-2xl border border-border/20 bg-surface p-4 text-left transition-[transform,background-color,border-color] active:scale-[0.98] active:bg-accent/10 active:border-accent/20"
     >
       <div className="w-10 h-10 rounded-xl bg-surface-raised flex items-center justify-center">

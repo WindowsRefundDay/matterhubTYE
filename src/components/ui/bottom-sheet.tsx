@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/icon";
+import { useTap } from "@/hooks/use-tap";
 
 interface BottomSheetProps {
   open: boolean;
@@ -18,6 +19,7 @@ export function BottomSheet({
   children,
   className,
 }: BottomSheetProps) {
+  const closeTap = useTap(onClose);
   return (
     <>
       <div
@@ -25,7 +27,7 @@ export function BottomSheet({
           "absolute inset-0 z-40 bg-black/50 transition-opacity duration-150 perf-panel",
           open ? "opacity-100" : "pointer-events-none opacity-0"
         )}
-        onPointerDown={open ? onClose : undefined}
+        {...(open ? closeTap : {})}
       />
 
       <div
@@ -42,7 +44,7 @@ export function BottomSheet({
           <div className="flex items-center justify-between border-b border-border/30 px-5 py-4">
             <h2 className="text-[16px] font-medium text-foreground">{title}</h2>
             <button
-              onPointerDown={onClose}
+              {...closeTap}
               className="rounded-full p-1 text-foreground/40 transition-[transform,color] hover:text-foreground/60 active:scale-90"
             >
               <Icon name="x" size={20} />

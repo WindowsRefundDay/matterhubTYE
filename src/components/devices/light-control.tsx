@@ -4,9 +4,11 @@ import { useSmartHomeActions } from "@/hooks/use-smart-home";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import type { Device } from "@/types";
+import { useTap } from "@/hooks/use-tap";
 
 export function LightControl({ device }: { device: Device }) {
   const { toggleDevice, setDeviceValue } = useSmartHomeActions();
+  const toggleTap = useTap(() => toggleDevice(device.id));
 
   return (
     <div className="space-y-5">
@@ -24,7 +26,7 @@ export function LightControl({ device }: { device: Device }) {
           </div>
         </div>
         <button
-          onPointerDown={() => toggleDevice(device.id)}
+          {...toggleTap}
           className={cn(
             "px-4 py-2 rounded-xl text-[13px] font-medium transition-colors",
             device.isOn ? "bg-accent text-black" : "bg-surface-raised text-foreground/60"

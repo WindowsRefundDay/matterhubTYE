@@ -5,8 +5,11 @@ services:
     restart: unless-stopped
     network_mode: host
     privileged: true
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
     volumes:
       - /var/lib/homeassistant:/config
       - /etc/localtime:/etc/localtime:ro
+      - /dev/serial/by-id:/dev/serial/by-id:ro
     environment:
       TZ: UTC

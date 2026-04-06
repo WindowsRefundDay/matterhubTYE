@@ -4,22 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import { useTap } from "@/hooks/use-tap";
-
-interface DisplayData {
-  supported: boolean;
-  screenOn: boolean;
-  brightnessPercent: number;
-  maxBrightness: number | null;
-  autoSleepEnabled: boolean;
-  dimAfterSeconds: number;
-  turnOffAfterSeconds: number;
-  preferredBrightnessPercent: number;
-  dimmedBrightnessPercent: number;
-  lastOnBrightnessPercent: number;
-  keepAwakeDuringDay: boolean;
-  dayStartsAt: string;
-  nightStartsAt: string;
-}
+import type { DisplayState } from "@/types/system";
 
 const TIMEOUT_OPTIONS = [15, 30, 60, 120, 300];
 const DAY_START_OPTIONS = ["06:00", "07:00", "08:00", "09:00"];
@@ -35,7 +20,7 @@ function formatClock(value: string) {
 }
 
 export function DisplayPanel({ onBack }: { onBack: () => void }) {
-  const [data, setData] = useState<DisplayData | null>(null);
+  const [data, setData] = useState<DisplayState | null>(null);
   const [busy, setBusy] = useState(false);
 
   const backTap = useTap(onBack);
@@ -44,7 +29,7 @@ export function DisplayPanel({ onBack }: { onBack: () => void }) {
     try {
       const res = await fetch("/api/system/display", { cache: "no-store" });
       if (res.ok) {
-        setData((await res.json()) as DisplayData);
+        setData((await res.json()) as DisplayState);
       }
     } catch {
       // preserve last known data on refresh failure
@@ -74,7 +59,7 @@ export function DisplayPanel({ onBack }: { onBack: () => void }) {
           body: JSON.stringify(body),
         });
         if (res.ok) {
-          setData((await res.json()) as DisplayData);
+          setData((await res.json()) as DisplayState);
         }
       } finally {
         setBusy(false);

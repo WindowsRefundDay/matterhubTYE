@@ -56,6 +56,7 @@ const icons: Record<string, string> = {
 
   // UI
   "power": "M13 3v8m4.243-5.243A8 8 0 1112 21a8 8 0 01-1-15.93",
+  speaker: "M11 5L6 9H3v6h3l5 4V5zm5.5 2.5a7 7 0 010 9m-2.5-6.5a4 4 0 010 4",
   "chevron-up": "M5 15l7-7 7 7",
   "chevron-down": "M19 9l-7 7-7-7",
   plus: "M12 4v16m8-8H4",

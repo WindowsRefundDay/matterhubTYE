@@ -4,9 +4,11 @@ import { useSmartHomeActions } from "@/hooks/use-smart-home";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import type { Device } from "@/types";
+import { useTap } from "@/hooks/use-tap";
 
 export function MediaControl({ device }: { device: Device }) {
   const { toggleDevice, setDeviceValue } = useSmartHomeActions();
+  const toggleTap = useTap(() => toggleDevice(device.id));
 
   return (
     <div className="space-y-5">
@@ -26,7 +28,7 @@ export function MediaControl({ device }: { device: Device }) {
           </div>
         </div>
         <button
-          onPointerDown={() => toggleDevice(device.id)}
+          {...toggleTap}
           className={cn(
             "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
             device.isOn ? "bg-accent text-black" : "bg-surface-raised text-foreground/60"

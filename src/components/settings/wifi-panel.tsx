@@ -4,34 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import { useTap } from "@/hooks/use-tap";
-
-interface WifiNetwork {
-  ssid: string;
-  signal: number;
-  security: string;
-  inUse: boolean;
-}
-
-interface ConnectionDetails {
-  ssid: string;
-  ip: string;
-  gateway: string;
-  dns: string;
-  security: string;
-  signal: number;
-  frequency: string;
-  linkSpeed: string;
-  macAddress: string;
-}
-
-interface WifiData {
-  wifiEnabled: boolean;
-  wlanState: string;
-  wlanConnection: string | null;
-  ethState: string;
-  connectionDetails: ConnectionDetails | null;
-  networks: WifiNetwork[];
-}
+import type { WifiStatus } from "@/types/system";
 
 function signalIcon(signal: number): string {
   if (signal >= 60) return "signal-high";
@@ -45,7 +18,7 @@ function securityLabel(sec: string): string {
 }
 
 export function WifiPanel({ onBack }: { onBack: () => void }) {
-  const [data, setData] = useState<WifiData | null>(null);
+  const [data, setData] = useState<WifiStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
 

@@ -4,6 +4,7 @@ import { memo } from "react";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import type { Room } from "@/types";
+import { useTap } from "@/hooks/use-tap";
 
 interface RoomTileProps {
   room: Room;
@@ -17,10 +18,11 @@ export const RoomTile = memo(function RoomTile({
   onSelect,
 }: RoomTileProps) {
   const total = room.deviceIds.length;
+  const tap = useTap(() => onSelect(room.id));
 
   return (
     <button
-      onPointerDown={() => onSelect(room.id)}
+      {...tap}
       className={cn(
         "flex flex-col gap-3 rounded-2xl border bg-surface p-4 text-left transition-[transform,background-color]",
         "active:scale-[0.98] active:bg-surface-raised"

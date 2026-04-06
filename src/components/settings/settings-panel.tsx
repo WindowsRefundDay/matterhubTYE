@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { Icon } from "@/components/ui/icon";
 import { SettingRow } from "./setting-row";
 import { useSmartHomeRuntime } from "@/hooks/use-smart-home";
@@ -8,33 +8,36 @@ import { cn } from "@/lib/utils";
 import { useTap } from "@/hooks/use-tap";
 import { WifiPanel } from "./wifi-panel";
 import { DisplayPanel } from "./display-panel";
+import type { WifiStatus, DisplayState } from "@/types/system";
 
-type WifiSummary = { wifiEnabled: boolean; wlanState: string; wlanConnection: string | null; ethState: string };
-type DisplaySummary = { supported: boolean; screenOn: boolean; brightnessPercent: number; autoSleepEnabled: boolean; dimAfterSeconds: number; turnOffAfterSeconds: number; keepAwakeDuringDay: boolean; dayStartsAt: string; nightStartsAt: string };
+const AUDIO_TEST_TRACK_SRC = "/audio/showtime-reference.mp3";
 
 export function SettingsPanel() {
   const [notifications, setNotifications] = useState(true);
   const [darkMode] = useState(true);
   const [wifiView, setWifiView] = useState(false);
   const [displayView, setDisplayView] = useState(false);
+  const [audioTestStatus, setAudioTestStatus] = useState("Ready to test the kiosk speakers");
+  const [isAudioTestPlaying, setIsAudioTestPlaying] = useState(false);
   const { backendMode, backendStatus, diagnostics, errorMessage, lastSyncAt } =
     useSmartHomeRuntime();
+  const audioTestRef = useRef<HTMLAudioElement | null>(null);
 
   // Lightweight Wi-Fi summary for the settings row
-  const [wifiSummary, setWifiSummary] = useState<WifiSummary | null>(null);
-  const [displaySummary, setDisplaySummary] = useState<DisplaySummary | null>(null);
+  const [wifiSummary, setWifiStatus] = useState<WifiStatus | null>(null);
+  const [displaySummary, setDisplayState] = useState<DisplayState | null>(null);
 
-  const fetchWifiSummary = useCallback(async () => {
+  const fetchWifiStatus = useCallback(async () => {
     try {
       const res = await fetch("/api/system/wifi");
-      if (res.ok) setWifiSummary(await res.json());
+      if (res.ok) setWifiStatus(await res.json());
     } catch { /* non-critical */ }
   }, []);
 
-  const fetchDisplaySummary = useCallback(async () => {
+  const fetchDisplayState = useCallback(async () => {
     try {
       const res = await fetch("/api/system/display", { cache: "no-store" });
-      if (res.ok) setDisplaySummary(await res.json());
+      if (res.ok) setDisplayState(await res.json());
     } catch {
       /* non-critical */
     }
@@ -42,38 +45,77 @@ export function SettingsPanel() {
 
   useEffect(() => {
     const initialRefresh = window.setTimeout(() => {
-      void fetchWifiSummary();
-      void fetchDisplaySummary();
+      void fetchWifiStatus();
+      void fetchDisplayState();
     }, 0);
 
     return () => {
       window.clearTimeout(initialRefresh);
     };
-  }, [fetchDisplaySummary, fetchWifiSummary]);
+  }, [fetchDisplayState, fetchWifiStatus]);
 
   // Refresh summaries when returning from sub-panels
   useEffect(() => {
     if (!wifiView) {
       const refresh = window.setTimeout(() => {
-        void fetchWifiSummary();
+        void fetchWifiStatus();
       }, 0);
       return () => window.clearTimeout(refresh);
     }
     return;
-  }, [wifiView, fetchWifiSummary]);
+  }, [wifiView, fetchWifiStatus]);
 
   useEffect(() => {
     if (!displayView) {
       const refresh = window.setTimeout(() => {
-        void fetchDisplaySummary();
+        void fetchDisplayState();
       }, 0);
       return () => window.clearTimeout(refresh);
     }
     return;
-  }, [displayView, fetchDisplaySummary]);
+  }, [displayView, fetchDisplayState]);
 
   const wifiTap = useTap(() => setWifiView(true));
   const displayTap = useTap(() => setDisplayView(true));
+
+  const stopAudioTest = useCallback(() => {
+    const audio = audioTestRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+    setIsAudioTestPlaying(false);
+  }, []);
+
+  const startAudioTest = useCallback(async () => {
+    stopAudioTest();
+
+    const audio = new window.Audio(AUDIO_TEST_TRACK_SRC);
+    audioTestRef.current = audio;
+    audio.preload = "auto";
+
+    audio.addEventListener("ended", () => {
+      setIsAudioTestPlaying(false);
+      setAudioTestStatus("Finished playing through the current speaker output");
+    }, { once: true });
+
+    audio.addEventListener("error", () => {
+      setIsAudioTestPlaying(false);
+      setAudioTestStatus("Audio test track failed to load");
+    }, { once: true });
+
+    try {
+      await audio.play();
+      setIsAudioTestPlaying(true);
+      setAudioTestStatus("Playing the test track through the current speaker output");
+    } catch {
+      setIsAudioTestPlaying(false);
+      setAudioTestStatus("Tap again after the kiosk browser finishes loading audio");
+    }
+  }, [stopAudioTest]);
+
+  useEffect(() => () => {
+    stopAudioTest();
+  }, [stopAudioTest]);
 
   const statusSummary = useMemo(() => {
     if (backendMode === "home-assistant" && backendStatus === "ok") {
@@ -282,6 +324,30 @@ export function SettingsPanel() {
             <Icon name="chevron-right" size={16} className="text-foreground/25" />
           </button>
           <SettingRow label="Resolution" value="800 x 480" />
+        </Section>
+
+        <Section title="Audio">
+          <div className="flex items-center gap-4 py-3.5">
+            <div className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-full",
+              isAudioTestPlaying ? "bg-emerald-500/15 text-emerald-400" : "bg-accent/15 text-accent"
+            )}>
+              <Icon name="speaker" size={20} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-medium text-foreground">Speaker test</p>
+              <p className="text-[12px] text-foreground/40">{audioTestStatus}</p>
+            </div>
+            <button
+              onClick={() => void (isAudioTestPlaying ? stopAudioTest() : startAudioTest())}
+              className={cn(
+                "rounded-xl px-3 py-2 text-[12px] font-medium transition-colors",
+                isAudioTestPlaying ? "bg-amber-500/15 text-amber-300" : "bg-accent text-black"
+              )}
+            >
+              {isAudioTestPlaying ? "Stop" : "Play"}
+            </button>
+          </div>
         </Section>
 
         <Section title="Notifications">

@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import type { Device } from "@/types";
 import { getDeviceIconName, getDeviceStatus } from "./device-presentation";
+import { useTap } from "@/hooks/use-tap";
 
 interface DeviceTileProps {
   device: Device;
@@ -17,6 +18,9 @@ export const DeviceTile = memo(function DeviceTile({
   onToggle,
   onSelect,
 }: DeviceTileProps) {
+  const toggleTap = useTap(() => onToggle(device.id));
+  const selectTap = useTap(() => onSelect?.(device.id));
+
   return (
     <div
       className={cn(
@@ -27,7 +31,7 @@ export const DeviceTile = memo(function DeviceTile({
       )}
     >
       <button
-        onPointerDown={() => onToggle(device.id)}
+        {...toggleTap}
         className={cn(
           "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-[transform,color,background-color]",
           "active:scale-95",
@@ -37,7 +41,7 @@ export const DeviceTile = memo(function DeviceTile({
         <Icon name={getDeviceIconName(device.type)} size={20} />
       </button>
       <button
-        onPointerDown={() => onSelect?.(device.id)}
+        {...selectTap}
         className="flex-1 text-left min-w-0 transition-transform active:scale-[0.99]"
       >
         <p className="text-[13px] font-medium text-foreground truncate">{device.name}</p>
@@ -49,7 +53,7 @@ export const DeviceTile = memo(function DeviceTile({
         </p>
       </button>
       <button
-        onPointerDown={() => onToggle(device.id)}
+        {...toggleTap}
         className={cn(
           "w-10 h-5 rounded-full relative shrink-0 transition-colors",
           device.isOn ? "bg-accent" : "bg-surface-raised"

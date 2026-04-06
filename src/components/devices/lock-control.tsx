@@ -4,9 +4,11 @@ import { useSmartHomeActions } from "@/hooks/use-smart-home";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import type { Device } from "@/types";
+import { useTap } from "@/hooks/use-tap";
 
 export function LockControl({ device }: { device: Device }) {
   const { toggleLock } = useSmartHomeActions();
+  const lockTap = useTap(() => toggleLock(device.id));
 
   return (
     <div className="flex flex-col items-center gap-5 py-4">
@@ -26,7 +28,7 @@ export function LockControl({ device }: { device: Device }) {
         </p>
       </div>
       <button
-        onPointerDown={() => toggleLock(device.id)}
+        {...lockTap}
         className={cn(
           "px-8 py-3 rounded-2xl text-[14px] font-medium transition-[transform,background-color] active:scale-95",
           device.isLocked

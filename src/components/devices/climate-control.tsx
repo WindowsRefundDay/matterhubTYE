@@ -4,9 +4,13 @@ import { useSmartHomeActions } from "@/hooks/use-smart-home";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import type { Device } from "@/types";
+import { useTap } from "@/hooks/use-tap";
 
 export function ClimateControl({ device }: { device: Device }) {
   const { toggleDevice, setDeviceValue, setDeviceTemperature } = useSmartHomeActions();
+  const tempDownTap = useTap(() => setDeviceTemperature(device.id, (device.targetTemperature || 72) - 1));
+  const tempUpTap = useTap(() => setDeviceTemperature(device.id, (device.targetTemperature || 72) + 1));
+  const toggleTap = useTap(() => toggleDevice(device.id));
 
   if (device.type === "thermostat") {
     return (
@@ -26,7 +30,7 @@ export function ClimateControl({ device }: { device: Device }) {
         </div>
         <div className="flex items-center justify-center gap-6">
           <button
-            onPointerDown={() => setDeviceTemperature(device.id, (device.targetTemperature || 72) - 1)}
+            {...tempDownTap}
             className="w-12 h-12 rounded-full bg-surface-raised flex items-center justify-center text-foreground/60 active:scale-90 transition-transform"
           >
             <Icon name="minus" size={20} />
@@ -38,7 +42,7 @@ export function ClimateControl({ device }: { device: Device }) {
             <p className="text-[12px] text-foreground/40">Target</p>
           </div>
           <button
-            onPointerDown={() => setDeviceTemperature(device.id, (device.targetTemperature || 72) + 1)}
+            {...tempUpTap}
             className="w-12 h-12 rounded-full bg-surface-raised flex items-center justify-center text-foreground/60 active:scale-90 transition-transform"
           >
             <Icon name="plus" size={20} />
@@ -65,7 +69,7 @@ export function ClimateControl({ device }: { device: Device }) {
           </div>
         </div>
         <button
-          onPointerDown={() => toggleDevice(device.id)}
+          {...toggleTap}
           className={cn(
             "px-4 py-2 rounded-xl text-[13px] font-medium transition-colors",
             device.isOn ? "bg-accent text-black" : "bg-surface-raised text-foreground/60"

@@ -20,26 +20,13 @@ import { RoomDetail } from "./rooms/room-detail";
 import { DeviceControl } from "./devices/device-control";
 import { Icon } from "./ui/icon";
 import type { Screen } from "@/types";
+import type { DisplayState } from "@/types/system";
 
-interface DisplayControlState {
-  supported: boolean;
-  screenOn: boolean;
-  brightnessPercent: number;
-  autoSleepEnabled: boolean;
-  dimAfterSeconds: number;
-  turnOffAfterSeconds: number;
-  preferredBrightnessPercent: number;
-  dimmedBrightnessPercent: number;
-  lastOnBrightnessPercent: number;
-  keepAwakeDuringDay: boolean;
-  dayStartsAt: string;
-  nightStartsAt: string;
-}
-
-const DEFAULT_DISPLAY_STATE: DisplayControlState = {
+const DEFAULT_DISPLAY_STATE: DisplayState = {
   supported: false,
   screenOn: true,
   brightnessPercent: 100,
+  maxBrightness: null,
   autoSleepEnabled: true,
   dimAfterSeconds: 30,
   turnOffAfterSeconds: 30,
@@ -87,7 +74,7 @@ export function AppShell() {
     goHome,
   } = useSmartHomeActions();
 
-  const [displayState, setDisplayState] = useState<DisplayControlState>(DEFAULT_DISPLAY_STATE);
+  const [displayState, setDisplayState] = useState<DisplayState>(DEFAULT_DISPLAY_STATE);
   const [minuteTick, setMinuteTick] = useState(() => Date.now());
   const { mode, screen, selectedRoomId, selectedDeviceId } = appState;
   const ambientVisible = mode === "ambient" || mode === "nav";
@@ -99,7 +86,7 @@ export function AppShell() {
       if (!response.ok) {
         return;
       }
-      const payload = (await response.json()) as DisplayControlState;
+      const payload = (await response.json()) as DisplayState;
       setDisplayState(payload);
     } catch {
       // non-critical; preserve the last known display state
@@ -115,7 +102,7 @@ export function AppShell() {
       });
 
       if (response.ok) {
-        const payload = (await response.json()) as DisplayControlState;
+        const payload = (await response.json()) as DisplayState;
         setDisplayState(payload);
       }
     } catch {
@@ -136,7 +123,7 @@ export function AppShell() {
       });
 
       if (response.ok) {
-        const payload = (await response.json()) as DisplayControlState;
+        const payload = (await response.json()) as DisplayState;
         setDisplayState(payload);
       }
     } catch {
