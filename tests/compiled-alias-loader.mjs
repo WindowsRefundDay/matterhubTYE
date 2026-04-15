@@ -8,6 +8,13 @@ function ensureJsExtension(targetPath) {
 }
 
 export async function resolve(specifier, context, defaultResolve) {
+  if (specifier === "server-only") {
+    return {
+      shortCircuit: true,
+      url: "data:text/javascript,export default undefined;",
+    };
+  }
+
   if (specifier.startsWith("@/")) {
     const resolvedPath = ensureJsExtension(
       path.join(compiledRoot, specifier.slice(2))

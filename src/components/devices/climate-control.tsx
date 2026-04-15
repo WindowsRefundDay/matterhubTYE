@@ -14,39 +14,48 @@ export function ClimateControl({ device }: { device: Device }) {
 
   if (device.type === "thermostat") {
     return (
-      <div className="space-y-5">
+      <div data-theme="minimalist" className="space-y-12 py-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-accent/20 text-accent flex items-center justify-center">
-              <Icon name="thermometer" size={24} />
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-xl bg-[var(--minimalist-pastel-blue)] text-[var(--minimalist-pastel-blue-fg)] border border-[var(--minimalist-pastel-blue-fg)]/20 flex items-center justify-center">
+              <Icon name="thermometer" size={28} />
             </div>
             <div>
-              <p className="text-[15px] font-medium">{device.name}</p>
-              <p className="text-[12px] text-foreground/40">
-                Current: {device.temperature}°F
+              <h3 className="text-[16px] font-medium tracking-tight text-foreground">{device.name}</h3>
+              <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted mt-1">
+                Ambient {device.temperature}°F
               </p>
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-center gap-6">
-          <button
-            {...tempDownTap}
-            className="w-12 h-12 rounded-full bg-surface-raised flex items-center justify-center text-foreground/60 active:scale-90 transition-transform"
-          >
-            <Icon name="minus" size={20} />
-          </button>
-          <div className="text-center">
-            <p className="text-[40px] font-light tabular-nums text-foreground">
-              {device.targetTemperature}°
-            </p>
-            <p className="text-[12px] text-foreground/40">Target</p>
+
+        <div className="flex flex-col items-center gap-8 py-4">
+          <div className="flex items-center justify-center gap-12">
+            <button
+              {...tempDownTap}
+              className="w-16 h-16 rounded-full border border-border flex items-center justify-center text-foreground hover:bg-muted/5 active:scale-90 transition-all"
+            >
+              <Icon name="minus" size={24} />
+            </button>
+            <div className="text-center min-w-[120px]">
+              <p className="font-serif text-[72px] leading-none text-foreground tabular-nums tracking-tighter">
+                {device.targetTemperature}
+              </p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-muted mt-2 ml-2">Target °F</p>
+            </div>
+            <button
+              {...tempUpTap}
+              className="w-16 h-16 rounded-full border border-border flex items-center justify-center text-foreground hover:bg-muted/5 active:scale-90 transition-all"
+            >
+              <Icon name="plus" size={24} />
+            </button>
           </div>
-          <button
-            {...tempUpTap}
-            className="w-12 h-12 rounded-full bg-surface-raised flex items-center justify-center text-foreground/60 active:scale-90 transition-transform"
-          >
-            <Icon name="plus" size={20} />
-          </button>
+        </div>
+
+        <div className="flex justify-center pt-4">
+           <div className="px-4 py-2 rounded-full bg-muted/5 border border-border">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">System {device.isOn ? "Heating" : "Standby"}</p>
+           </div>
         </div>
       </div>
     );
@@ -54,44 +63,52 @@ export function ClimateControl({ device }: { device: Device }) {
 
   // Fan / Purifier
   return (
-    <div className="space-y-5">
+    <div data-theme="minimalist" className="space-y-8 py-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <div className={cn(
-            "w-12 h-12 rounded-xl flex items-center justify-center",
-            device.isOn ? "bg-accent/20 text-accent" : "bg-surface-raised text-foreground/40"
+            "w-14 h-14 rounded-xl flex items-center justify-center border transition-all",
+            device.isOn 
+              ? "bg-[var(--minimalist-pastel-green)] text-[var(--minimalist-pastel-green-fg)] border-[var(--minimalist-pastel-green-fg)]/20" 
+              : "bg-muted/5 text-muted border-border"
           )}>
-            <Icon name={device.type === "fan" ? "fan" : "wind"} size={24} />
+            <Icon name={device.type === "fan" ? "fan" : "wind"} size={28} />
           </div>
           <div>
-            <p className="text-[15px] font-medium">{device.name}</p>
-            <p className="text-[12px] text-foreground/40">{device.isOn ? `Speed: ${device.value}%` : "Off"}</p>
+            <h3 className="text-[16px] font-medium tracking-tight text-foreground">{device.name}</h3>
+            <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted mt-1">
+              {device.isOn ? `Active at ${device.value}%` : "Suspended"}
+            </p>
           </div>
         </div>
         <button
           {...toggleTap}
           className={cn(
-            "px-4 py-2 rounded-xl text-[13px] font-medium transition-colors",
-            device.isOn ? "bg-accent text-black" : "bg-surface-raised text-foreground/60"
+            "px-6 py-2 rounded-md text-[11px] font-bold uppercase tracking-widest transition-all active:scale-95",
+            device.isOn 
+              ? "bg-foreground text-background" 
+              : "bg-background text-foreground border border-border"
           )}
         >
-          {device.isOn ? "On" : "Off"}
+          {device.isOn ? "Switch Off" : "Switch On"}
         </button>
       </div>
       {device.isOn && (
-        <div className="space-y-2">
-          <div className="flex justify-between text-[12px] text-foreground/40">
-            <span>Speed</span>
-            <span>{device.value}%</span>
+        <div className="space-y-4 pt-4">
+          <div className="flex justify-between items-end">
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted">Flow Intensity</span>
+            <span className="text-[14px] font-mono text-foreground">{device.value}%</span>
           </div>
-          <input
-            type="range"
-            min={1}
-            max={100}
-            value={device.value || 50}
-            onChange={(e) => setDeviceValue(device.id, Number(e.target.value))}
-            className="w-full h-1.5 rounded-full appearance-none bg-surface-raised [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow-md"
-          />
+          <div className="relative flex items-center h-8">
+            <input
+              type="range"
+              min={1}
+              max={100}
+              value={device.value || 50}
+              onChange={(e) => setDeviceValue(device.id, Number(e.target.value))}
+              className="w-full h-[2px] rounded-full appearance-none bg-border [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:rounded-md [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-border [&::-webkit-slider-thumb]:shadow-sm transition-all"
+            />
+          </div>
         </div>
       )}
     </div>

@@ -1,0 +1,99 @@
+# MatterHub agent testing notes
+
+## Audio test flow
+
+The **Settings → Audio → Test audio** flow now does two things:
+
+1. opens the full-screen Apple Music-like player and starts the local Don Toliver reference track
+2. writes structured log entries so we can inspect Raspberry Pi audio behavior later
+
+## Log file
+
+By default, audio-test events are appended to:
+
+```text
+.tmp/audio-test-events.jsonl
+```
+
+Override it with:
+
+```bash
+MATTERHUB_AUDIO_TEST_LOG_FILE=/path/to/audio-test-events.jsonl
+```
+
+Each line is JSON and includes:
+- timestamp
+- event name
+- selected output ID / label
+- browser capability flags
+- user agent
+- playback or sink errors when present
+
+## Useful events
+
+- `audio_output_selected`
+- `audio_output_picker_succeeded`
+- `audio_output_picker_failed`
+- `audio_test_opened`
+- `audio_test_sink_applied`
+- `audio_test_sink_failed`
+- `audio_test_play`
+- `audio_test_pause`
+- `audio_test_ended`
+- `audio_test_error`
+
+## How to inspect logs on a Pi later
+
+From the repo/app directory:
+
+```bash
+tail -f .tmp/audio-test-events.jsonl
+```
+
+Or through the app route:
+
+```bash
+curl http://127.0.0.1:3000/api/system/audio-test-log
+```
+
+## Raspberry Pi browser support notes
+
+This feature is implemented as a **best-effort** browser output selector:
+
+- If Chromium exposes `HTMLMediaElement.setSinkId()`, the player will try to bind the audio element to the selected output.
+- If Chromium exposes `MediaDevices.selectAudioOutput()`, the Settings screen can ask the browser to pick an output device explicitly.
+- If those APIs are unavailable, playback falls back to the browser default output and the limitation is logged.
+
+For successful non-default routing, browser support must allow:
+- secure context
+- output-device permission
+- `setSinkId()` support
+
+This means the UI is ready now, and the logs should tell us exactly what the Pi browser/runtime supports once hardware is available.
+
+## Verification commands
+
+Run from the repo root:
+
+```bash
+npm run lint
+npm run test
+npm run build
+./node_modules/.bin/tsc --noEmit
+```
+
+## Manual Pi validation checklist
+
+When a Raspberry Pi 4B is available:
+
+1. Start the app in hardware mode.
+2. Open **Settings → Audio**.
+3. Select a candidate output.
+4. Press **Test audio**.
+5. Confirm whether audio is audible from the expected sink.
+6. Inspect `.tmp/audio-test-events.jsonl`.
+7. Record:
+   - browser support flags
+   - sink-apply success/failure
+   - autoplay/playback failures
+   - actual heard output path

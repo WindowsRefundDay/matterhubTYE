@@ -3,6 +3,12 @@ import path from "node:path";
 import type { DisplayConfig } from "../config";
 import type { DisplayState, DisplaySettings } from "@/types/system";
 
+interface DisplayClientDeps {
+  mkdir: typeof mkdir;
+  readFile: typeof readFile;
+  writeFile: typeof writeFile;
+}
+
 // ---------------------------------------------------------------------------
 // Utilities
 // ---------------------------------------------------------------------------
@@ -44,12 +50,21 @@ const DEFAULT_SETTINGS: DisplaySettings = {
   nightStartsAt: "22:00",
 };
 
+const defaultDisplayClientDeps: DisplayClientDeps = {
+  mkdir,
+  readFile,
+  writeFile,
+};
+
 // ---------------------------------------------------------------------------
 // DisplayClient
 // ---------------------------------------------------------------------------
 
 export class DisplayClient {
-  constructor(private readonly config: DisplayConfig) {}
+  constructor(
+    private readonly config: DisplayConfig,
+    private readonly deps: DisplayClientDeps = defaultDisplayClientDeps,
+  ) {}
 
   // ── Read state ──────────────────────────────────────────────────────────
 
@@ -68,9 +83,9 @@ export class DisplayClient {
     }
 
     const [maxRaw, brightnessRaw] = await Promise.all([
-      readFile(this.config.maxBrightnessPath, "utf8"),
-      readFile(this.config.actualBrightnessPath, "utf8").catch(() =>
-        readFile(this.config.brightnessPath, "utf8"),
+      this.deps.readFile(this.config.maxBrightnessPath, "utf8"),
+      this.deps.readFile(this.config.actualBrightnessPath, "utf8").catch(() =>
+        this.deps.readFile(this.config.brightnessPath, "utf8"),
       ),
     ]);
 
@@ -191,8 +206,8 @@ export class DisplayClient {
   private async isHardwareAvailable(): Promise<boolean> {
     if (this.config.mode === "mock") return false;
     try {
-      await readFile(this.config.brightnessPath, "utf8");
-      await readFile(this.config.maxBrightnessPath, "utf8");
+      await this.deps.readFile(this.config.brightnessPath, "utf8");
+      await this.deps.readFile(this.config.maxBrightnessPath, "utf8");
       return true;
     } catch {
       return false;
@@ -202,7 +217,7 @@ export class DisplayClient {
   private async loadSettings(): Promise<DisplaySettings> {
     try {
       const data = JSON.parse(
-        await readFile(this.config.settingsFile, "utf8"),
+        await this.deps.readFile(this.config.settingsFile, "utf8"),
       ) as Partial<DisplaySettings>;
 
       return {
@@ -249,8 +264,8 @@ export class DisplayClient {
   }
 
   private async saveSettings(settings: DisplaySettings): Promise<void> {
-    await mkdir(path.dirname(this.config.settingsFile), { recursive: true });
-    await writeFile(
+    await this.deps.mkdir(path.dirname(this.config.settingsFile), { recursive: true });
+    await this.deps.writeFile(
       this.config.settingsFile,
       `${JSON.stringify(settings, null, 2)}\n`,
       "utf8",
@@ -259,11 +274,11 @@ export class DisplayClient {
 
   private async writeBrightnessPercent(percent: number): Promise<void> {
     const maxBrightness = clamp(
-      toInt((await readFile(this.config.maxBrightnessPath, "utf8")).trim()),
+      toInt((await this.deps.readFile(this.config.maxBrightnessPath, "utf8")).trim()),
       1,
       65535,
     );
     const raw = Math.round((clamp(percent, 0, 100) / 100) * maxBrightness);
-    await writeFile(this.config.brightnessPath, `${raw}\n`, "utf8");
+    await this.deps.writeFile(this.config.brightnessPath, `${raw}\n`, "utf8");
   }
 }

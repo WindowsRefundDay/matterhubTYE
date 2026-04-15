@@ -6,14 +6,31 @@ Ambient smart home hub UI for a 5-inch (800x480) display. Built with Next.js, Ty
 
 ```bash
 npm install
-npm run dev
+cp .env.example .env.local
+npm run dev:mock
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to see the hub interface.
 
+Use mock mode on this machine for normal UI development. When you are validating the real Pi hardware path, run the app in hardware mode on the Pi:
+
+```bash
+npm run dev:hardware
+```
+
 For production Raspberry Pi deployment, build the standalone bundle with `npm run build` and launch it with `npm run start:standalone`. Deployment assets for `systemd` and `labwc` kiosk startup live in `deploy/raspberry-pi/README.md`.
 
 For the approved Arch Linux ARM appliance direction, see `docs/arch-rpi4-appliance.md`, the review notes in `docs/arch-rpi4-code-review.md`, and the preview setup/maintenance routes at `/setup` and `/maintenance` during local development.
+
+For the agent-friendly repo boundary and feature workflow, see `docs/development/kiosk-dev-workflow.md`.
+
+## Local preview workflow
+
+- **Mock preview on this machine**: `npm run dev:mock`
+- **Hardware preview on the Pi**: `npm run dev:hardware`
+- **Production standalone check**: `npm run build` then `npm run start:standalone`
+
+Mock mode should be the default for UI and feature work here. It lets you preview changes on this machine without touching Pi IO like display brightness or Wi-Fi.
 
 ## Architecture
 

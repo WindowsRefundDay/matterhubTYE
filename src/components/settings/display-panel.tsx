@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { Icon } from "@/components/ui/icon";
+import { useDisplayState } from "@/hooks/use-display-state";
 import { cn } from "@/lib/utils";
 import { useTap } from "@/hooks/use-tap";
-import type { DisplayState } from "@/types/system";
+import type { DisplayAction } from "@/types/system";
 
 const TIMEOUT_OPTIONS = [15, 30, 60, 120, 300];
 const DAY_START_OPTIONS = ["06:00", "07:00", "08:00", "09:00"];
@@ -20,52 +21,23 @@ function formatClock(value: string) {
 }
 
 export function DisplayPanel({ onBack }: { onBack: () => void }) {
-  const [data, setData] = useState<DisplayState | null>(null);
-  const [busy, setBusy] = useState(false);
+  const {
+    data,
+    busy,
+    performAction,
+  } = useDisplayState({ pollMs: 10000 });
 
   const backTap = useTap(onBack);
 
-  const fetchData = useCallback(async () => {
-    try {
-      const res = await fetch("/api/system/display", { cache: "no-store" });
-      if (res.ok) {
-        setData((await res.json()) as DisplayState);
-      }
-    } catch {
-      // preserve last known data on refresh failure
-    }
-  }, []);
-
-  useEffect(() => {
-    const initialRefresh = window.setTimeout(() => {
-      void fetchData();
-    }, 0);
-    const interval = window.setInterval(() => {
-      void fetchData();
-    }, 10000);
-    return () => {
-      window.clearTimeout(initialRefresh);
-      window.clearInterval(interval);
-    };
-  }, [fetchData]);
-
   const postAction = useCallback(
-    async (body: Record<string, unknown>) => {
-      setBusy(true);
+    async (action: DisplayAction) => {
       try {
-        const res = await fetch("/api/system/display", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (res.ok) {
-          setData((await res.json()) as DisplayState);
-        }
-      } finally {
-        setBusy(false);
+        await performAction(action);
+      } catch {
+        // preserve last known data on action failure
       }
     },
-    []
+    [performAction]
   );
 
   const brightness = data?.brightnessPercent ?? 100;
@@ -103,62 +75,61 @@ export function DisplayPanel({ onBack }: { onBack: () => void }) {
   }, [brightness, data, dimAfterSeconds, screenOn, turnOffAfterSeconds]);
 
   return (
-    <div className="relative flex h-full flex-col">
-      <div className="mb-4 flex items-center gap-3">
+    <div className="relative flex h-full flex-col bg-background">
+      <div className="flex items-center gap-4 px-6 pt-8 pb-4">
         <button
           {...backTap}
-          className="flex h-8 w-8 items-center justify-center rounded-xl text-foreground/50 transition-transform active:scale-90"
+          className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-muted transition-transform active:scale-90"
         >
-          <Icon name="chevron-left" size={18} />
+          <Icon name="chevron-left" size={20} />
         </button>
-        <h1 className="text-[20px] font-medium text-foreground">Screen & brightness</h1>
+        <h1 className="font-serif text-[28px] tracking-tight text-foreground">Display</h1>
       </div>
 
-      <div className="perf-scroll-region flex-1 space-y-5 overflow-y-auto scrollbar-hide">
-        <div className={cn("rounded-2xl border px-4 py-4", statusCopy.tone)}>
-          <div className="flex items-center gap-3">
+      <div className="perf-scroll-region flex-1 space-y-10 overflow-y-auto scrollbar-hide px-6 pb-32">
+        <div className={cn("rounded-lg border px-5 py-5", statusCopy.tone)}>
+          <div className="flex items-center gap-4">
             <div
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-full",
-                screenOn ? "bg-white/10" : "bg-black/20"
+                "flex h-12 w-12 items-center justify-center rounded-lg border bg-white/50"
               )}
             >
-              <Icon name="power" size={18} />
+              <Icon name="power" size={20} />
             </div>
             <div>
-              <p className="text-[14px] font-semibold">{statusCopy.title}</p>
-              <p className="mt-1 text-[12px] text-current/75">{statusCopy.subtitle}</p>
+              <p className="text-[14px] font-bold uppercase tracking-wider">{statusCopy.title}</p>
+              <p className="mt-1 text-[12px] opacity-80">{statusCopy.subtitle}</p>
             </div>
           </div>
         </div>
 
         <section className="perf-section">
-          <h2 className="mb-2 text-[13px] font-medium uppercase tracking-wider text-foreground/40">
-            Display controls
+          <h2 className="mb-4 text-[11px] font-bold uppercase tracking-[0.15em] text-muted border-l-2 border-foreground pl-3">
+            Hardware Control
           </h2>
-          <div className="space-y-4 rounded-2xl border border-border/15 bg-surface/40 p-4">
-            <div className="flex items-center justify-between gap-4">
+          <div className="space-y-6 rounded-lg border border-border bg-muted/5 p-5">
+            <div className="flex items-center justify-between gap-5">
               <div>
-                <p className="text-[14px] font-medium text-foreground">Screen power</p>
-                <p className="text-[12px] text-foreground/40">Turn the backlight on or off instantly.</p>
+                <p className="text-[15px] font-medium text-foreground">Backlight Power</p>
+                <p className="text-[12px] text-muted">Toggle the physical panel output.</p>
               </div>
               <button
                 onClick={() => void postAction({ action: "set_power", on: !screenOn })}
                 disabled={busy || !data?.supported}
                 className={cn(
-                  "rounded-xl px-4 py-2 text-[13px] font-medium transition-colors",
-                  screenOn ? "bg-amber-500/15 text-amber-300" : "bg-accent text-black",
-                  (!data?.supported || busy) && "opacity-50"
+                  "rounded-md px-5 py-2.5 text-[11px] font-bold uppercase tracking-widest transition-all active:scale-95",
+                  screenOn ? "bg-background border border-border text-foreground" : "bg-foreground text-background",
+                  (!data?.supported || busy) && "opacity-30 active:scale-100"
                 )}
               >
-                {screenOn ? "Turn off" : "Turn on"}
+                {screenOn ? "Power Off" : "Power On"}
               </button>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-[13px] text-foreground/60">
-                <span>Daytime brightness</span>
-                <span>{brightness}%</span>
+            <div className="space-y-4 pt-4 border-t border-border/50">
+              <div className="flex items-center justify-between">
+                <p className="text-[14px] font-medium text-foreground">Luminance</p>
+                <span className="text-[12px] font-mono text-muted bg-background px-2 py-0.5 border border-border rounded-sm">{brightness}%</span>
               </div>
               <input
                 type="range"
@@ -172,47 +143,47 @@ export function DisplayPanel({ onBack }: { onBack: () => void }) {
                     brightnessPercent: Number(event.target.value),
                   })
                 }
-                className="w-full h-1.5 rounded-full appearance-none bg-surface-raised [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow-md"
+                className="w-full h-1.5 rounded-full appearance-none bg-border/50 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:rounded-md [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-border [&::-webkit-slider-thumb]:bg-background [&::-webkit-slider-thumb]:shadow-sm"
               />
-              <p className="text-[11px] text-foreground/35">
-                Setting brightness to 0 turns the backlight off while keeping the app running.
+              <p className="text-[11px] text-muted italic">
+                A setting of 0% will completely darken the environment.
               </p>
             </div>
           </div>
         </section>
 
         <section className="perf-section">
-          <h2 className="mb-2 text-[13px] font-medium uppercase tracking-wider text-foreground/40">
-            Auto-dim & sleep
+          <h2 className="mb-4 text-[11px] font-bold uppercase tracking-[0.15em] text-muted border-l-2 border-foreground pl-3">
+            Energy Management
           </h2>
-          <div className="space-y-4 rounded-2xl border border-border/15 bg-surface/40 p-4">
-            <div className="flex items-center justify-between gap-4">
+          <div className="space-y-8 rounded-lg border border-border bg-muted/5 p-5">
+            <div className="flex items-center justify-between gap-5">
               <div>
-                <p className="text-[14px] font-medium text-foreground">Auto-dim</p>
-                <p className="text-[12px] text-foreground/40">Dim first, then turn the backlight fully off after more idle time.</p>
+                <p className="text-[15px] font-medium text-foreground">Intelligent Dimming</p>
+                <p className="text-[12px] text-muted">Automated reduction of power during idle.</p>
               </div>
               <button
                 onClick={() => void postAction({ action: "set_auto_sleep", enabled: !autoSleepEnabled })}
                 disabled={busy || !data?.supported}
                 className={cn(
-                  "relative h-6 w-11 rounded-full transition-colors",
-                  autoSleepEnabled ? "bg-accent" : "bg-surface-raised",
-                  (!data?.supported || busy) && "opacity-50"
+                  "w-10 h-6 rounded-md relative shrink-0 transition-colors duration-200",
+                  autoSleepEnabled ? "bg-foreground" : "bg-muted/10 border border-border",
+                  (!data?.supported || busy) && "opacity-30"
                 )}
               >
-                <span
+                <div
                   className={cn(
-                    "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
-                    autoSleepEnabled ? "translate-x-[22px]" : "translate-x-0.5"
+                    "absolute top-1 w-4 h-4 rounded-sm transition-transform duration-200",
+                    autoSleepEnabled ? "translate-x-5 bg-background" : "translate-x-1 bg-muted/40"
                   )}
                 />
               </button>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-[13px] text-foreground/60">
-                <span>Dim brightness</span>
-                <span>{dimmedBrightnessPercent}%</span>
+            <div className="space-y-4 pt-4 border-t border-border/50">
+              <div className="flex items-center justify-between">
+                <p className="text-[14px] font-medium text-foreground">Idle State Brightness</p>
+                <span className="text-[12px] font-mono text-muted bg-background px-2 py-0.5 border border-border rounded-sm">{dimmedBrightnessPercent}%</span>
               </div>
               <input
                 type="range"
@@ -226,12 +197,12 @@ export function DisplayPanel({ onBack }: { onBack: () => void }) {
                     dimmedBrightnessPercent: Number(event.target.value),
                   })
                 }
-                className="w-full h-1.5 rounded-full appearance-none bg-surface-raised [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow-md"
+                className="w-full h-1.5 rounded-full appearance-none bg-border/50 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:rounded-md [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-border [&::-webkit-slider-thumb]:bg-background [&::-webkit-slider-thumb]:shadow-sm"
               />
             </div>
 
-            <div className="space-y-2">
-              <p className="text-[13px] font-medium text-foreground">Dim after</p>
+            <div className="space-y-4">
+              <p className="text-[13px] font-bold uppercase tracking-wider text-foreground">Dimming Latency</p>
               <div className="flex flex-wrap gap-2">
                 {TIMEOUT_OPTIONS.map((option) => (
                   <button
@@ -241,21 +212,21 @@ export function DisplayPanel({ onBack }: { onBack: () => void }) {
                     }
                     disabled={busy || !data?.supported || !autoSleepEnabled}
                     className={cn(
-                      "rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors",
+                      "rounded-md border px-3 py-2 text-[11px] font-bold tracking-widest transition-all",
                       dimAfterSeconds === option
-                        ? "bg-accent text-black"
-                        : "bg-surface-raised text-foreground/55",
-                      (!data?.supported || busy || !autoSleepEnabled) && "opacity-50"
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-background text-muted border-border hover:border-muted",
+                      (!data?.supported || busy || !autoSleepEnabled) && "opacity-30"
                     )}
                   >
-                    {option}s
+                    {option}S
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <p className="text-[13px] font-medium text-foreground">Turn off after dimming</p>
+            <div className="space-y-4">
+              <p className="text-[13px] font-bold uppercase tracking-wider text-foreground">Terminal Power State</p>
               <div className="flex flex-wrap gap-2">
                 {TIMEOUT_OPTIONS.map((option) => (
                   <button
@@ -268,33 +239,33 @@ export function DisplayPanel({ onBack }: { onBack: () => void }) {
                     }
                     disabled={busy || !data?.supported || !autoSleepEnabled}
                     className={cn(
-                      "rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors",
+                      "rounded-md border px-3 py-2 text-[11px] font-bold tracking-widest transition-all",
                       turnOffAfterSeconds === option
-                        ? "bg-accent text-black"
-                        : "bg-surface-raised text-foreground/55",
-                      (!data?.supported || busy || !autoSleepEnabled) && "opacity-50"
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-background text-muted border-border hover:border-muted",
+                      (!data?.supported || busy || !autoSleepEnabled) && "opacity-30"
                     )}
                   >
-                    {option}s
+                    {option}S
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-foreground/35">
-                Any touch restores the regular brightness immediately.
+              <p className="text-[11px] text-muted italic">
+                Backlight is fully terminated after secondary latency period.
               </p>
             </div>
           </div>
         </section>
 
         <section className="perf-section">
-          <h2 className="mb-2 text-[13px] font-medium uppercase tracking-wider text-foreground/40">
-            Daytime behavior
+          <h2 className="mb-4 text-[11px] font-bold uppercase tracking-[0.15em] text-muted border-l-2 border-foreground pl-3">
+            Circadian Logic
           </h2>
-          <div className="space-y-4 rounded-2xl border border-border/15 bg-surface/40 p-4">
-            <div className="flex items-center justify-between gap-4">
+          <div className="space-y-8 rounded-lg border border-border bg-muted/5 p-5">
+            <div className="flex items-center justify-between gap-5">
               <div>
-                <p className="text-[14px] font-medium text-foreground">Keep screen awake during day</p>
-                <p className="text-[12px] text-foreground/40">Ignore idle dimming between your daytime hours.</p>
+                <p className="text-[15px] font-medium text-foreground">Diurnal Awakening</p>
+                <p className="text-[12px] text-muted">Prevent sleep cycles during active daylight.</p>
               </div>
               <button
                 onClick={() =>
@@ -305,22 +276,22 @@ export function DisplayPanel({ onBack }: { onBack: () => void }) {
                 }
                 disabled={busy || !data?.supported}
                 className={cn(
-                  "relative h-6 w-11 rounded-full transition-colors",
-                  keepAwakeDuringDay ? "bg-accent" : "bg-surface-raised",
-                  (!data?.supported || busy) && "opacity-50"
+                  "w-10 h-6 rounded-md relative shrink-0 transition-colors duration-200",
+                  keepAwakeDuringDay ? "bg-foreground" : "bg-muted/10 border border-border",
+                  (!data?.supported || busy) && "opacity-30"
                 )}
               >
-                <span
+                <div
                   className={cn(
-                    "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
-                    keepAwakeDuringDay ? "translate-x-[22px]" : "translate-x-0.5"
+                    "absolute top-1 w-4 h-4 rounded-sm transition-transform duration-200",
+                    keepAwakeDuringDay ? "translate-x-5 bg-background" : "translate-x-1 bg-muted/40"
                   )}
                 />
               </button>
             </div>
 
-            <div className="space-y-2">
-              <p className="text-[13px] font-medium text-foreground">Day starts</p>
+            <div className="space-y-4 pt-4 border-t border-border/50">
+              <p className="text-[13px] font-bold uppercase tracking-wider text-foreground">Daylight Commencement</p>
               <div className="flex flex-wrap gap-2">
                 {DAY_START_OPTIONS.map((option) => (
                   <button
@@ -334,11 +305,11 @@ export function DisplayPanel({ onBack }: { onBack: () => void }) {
                     }
                     disabled={busy || !data?.supported || !keepAwakeDuringDay}
                     className={cn(
-                      "rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors",
+                      "rounded-md border px-3 py-2 text-[11px] font-bold tracking-widest transition-all",
                       dayStartsAt === option
-                        ? "bg-accent text-black"
-                        : "bg-surface-raised text-foreground/55",
-                      (!data?.supported || busy || !keepAwakeDuringDay) && "opacity-50"
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-background text-muted border-border hover:border-muted",
+                      (!data?.supported || busy || !keepAwakeDuringDay) && "opacity-30"
                     )}
                   >
                     {formatClock(option)}
@@ -347,8 +318,8 @@ export function DisplayPanel({ onBack }: { onBack: () => void }) {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <p className="text-[13px] font-medium text-foreground">Night starts</p>
+            <div className="space-y-4">
+              <p className="text-[13px] font-bold uppercase tracking-wider text-foreground">Nocturnal Threshold</p>
               <div className="flex flex-wrap gap-2">
                 {NIGHT_START_OPTIONS.map((option) => (
                   <button
@@ -362,23 +333,24 @@ export function DisplayPanel({ onBack }: { onBack: () => void }) {
                     }
                     disabled={busy || !data?.supported || !keepAwakeDuringDay}
                     className={cn(
-                      "rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors",
+                      "rounded-md border px-3 py-2 text-[11px] font-bold tracking-widest transition-all",
                       nightStartsAt === option
-                        ? "bg-accent text-black"
-                        : "bg-surface-raised text-foreground/55",
-                      (!data?.supported || busy || !keepAwakeDuringDay) && "opacity-50"
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-background text-muted border-border hover:border-muted",
+                      (!data?.supported || busy || !keepAwakeDuringDay) && "opacity-30"
                     )}
                   >
                     {formatClock(option)}
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-foreground/35">
-                Daytime awake window: {formatClock(dayStartsAt)} → {formatClock(nightStartsAt)}.
+              <p className="text-[11px] text-muted italic">
+                Active daylight window currently configured: {formatClock(dayStartsAt)} — {formatClock(nightStartsAt)}.
               </p>
             </div>
           </div>
         </section>
+        <div className="h-12" />
       </div>
     </div>
   );

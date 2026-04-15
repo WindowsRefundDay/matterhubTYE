@@ -21,10 +21,10 @@ export function BottomSheet({
 }: BottomSheetProps) {
   const closeTap = useTap(onClose);
   return (
-    <>
+    <div data-theme="minimalist">
       <div
         className={cn(
-          "absolute inset-0 z-40 bg-black/50 transition-opacity duration-150 perf-panel",
+          "absolute inset-0 z-40 bg-black/20 backdrop-blur-[2px] transition-opacity duration-200 perf-panel",
           open ? "opacity-100" : "pointer-events-none opacity-0"
         )}
         {...(open ? closeTap : {})}
@@ -32,29 +32,37 @@ export function BottomSheet({
 
       <div
         className={cn(
-          "absolute bottom-0 left-0 right-0 z-50 flex max-h-[85%] flex-col overflow-hidden rounded-t-2xl border-t border-border/50 bg-surface",
-          "transition-[transform,opacity] duration-200 ease-out perf-panel",
+          "absolute bottom-0 left-0 right-0 z-50 flex max-h-[90%] flex-col overflow-hidden rounded-t-[32px] border-t border-border bg-background shadow-2xl",
+          "transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] perf-panel",
           open
             ? "translate-y-0 opacity-100"
             : "pointer-events-none translate-y-full opacity-0",
           className
         )}
       >
-        {title && (
-          <div className="flex items-center justify-between border-b border-border/30 px-5 py-4">
-            <h2 className="text-[16px] font-medium text-foreground">{title}</h2>
-            <button
-              {...closeTap}
-              className="rounded-full p-1 text-foreground/40 transition-[transform,color] hover:text-foreground/60 active:scale-90"
-            >
-              <Icon name="x" size={20} />
-            </button>
+        <div className="flex flex-col">
+          {/* Grab handle */}
+          <div className="flex justify-center pt-3 pb-2">
+            <div className="w-10 h-1 rounded-full bg-muted/20" />
           </div>
-        )}
-        <div className="flex-1 overflow-y-auto scrollbar-hide p-5 perf-scroll-region">
+
+          {title && (
+            <div className="flex items-center justify-between px-6 py-4">
+              <h2 className="font-serif text-[24px] tracking-tight text-foreground">{title}</h2>
+              <button
+                {...closeTap}
+                className="rounded-full p-2 text-muted transition-all hover:bg-muted/5 active:scale-90"
+              >
+                <Icon name="x" size={20} />
+              </button>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex-1 overflow-y-auto scrollbar-hide px-6 pb-12 pt-2 perf-scroll-region">
           {children}
         </div>
       </div>
-    </>
+    </div>
   );
 }

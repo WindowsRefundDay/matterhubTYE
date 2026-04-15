@@ -2,8 +2,23 @@ import { execSync } from "node:child_process";
 import type { WifiConfig } from "../config";
 import type { WifiStatus, WifiConnectionDetails, WifiNetwork } from "@/types/system";
 
+interface WifiClientDeps {
+  runCommand: (command: string, timeout: number) => string;
+}
+
+const defaultWifiClientDeps: WifiClientDeps = {
+  runCommand: (command, timeout) =>
+    execSync(command, {
+      timeout,
+      encoding: "utf8",
+    }).trim(),
+};
+
 export class WifiClient {
-  constructor(private readonly config: WifiConfig) {}
+  constructor(
+    private readonly config: WifiConfig,
+    private readonly deps: WifiClientDeps = defaultWifiClientDeps,
+  ) {}
 
   // ── Read status ─────────────────────────────────────────────────────────
 
@@ -105,10 +120,7 @@ export class WifiClient {
   private run(cmd: string, timeout?: number): string {
     const prefix = this.config.commandPrefix;
     const fullCmd = prefix ? `${prefix} ${cmd}` : cmd;
-    return execSync(fullCmd, {
-      timeout: timeout ?? this.config.commandTimeout,
-      encoding: "utf8",
-    }).trim();
+    return this.deps.runCommand(fullCmd, timeout ?? this.config.commandTimeout);
   }
 
   private readConnectionDetails(

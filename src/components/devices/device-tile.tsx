@@ -22,47 +22,41 @@ export const DeviceTile = memo(function DeviceTile({
   const selectTap = useTap(() => onSelect?.(device.id));
 
   return (
-    <div
-      className={cn(
-        "flex items-center gap-3 rounded-2xl border p-3.5 transition-colors",
-        device.isOn
-          ? "bg-accent/10 border-accent/20"
-          : "bg-surface border-border/20"
-      )}
-    >
+    <div className="flex w-full items-center gap-5 py-5 text-left border-b border-border last:border-0">
       <button
-        {...toggleTap}
+        {...selectTap}
         className={cn(
-          "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-[transform,color,background-color]",
-          "active:scale-95",
-          device.isOn ? "bg-accent/20 text-accent" : "bg-surface-raised text-foreground/40"
+          "flex h-12 w-12 items-center justify-center rounded-lg border shrink-0 transition-transform active:scale-95",
+          device.isOn ? "bg-foreground text-background border-foreground" : "bg-muted/5 text-muted border-border"
         )}
       >
         <Icon name={getDeviceIconName(device.type)} size={20} />
       </button>
+
       <button
         {...selectTap}
-        className="flex-1 text-left min-w-0 transition-transform active:scale-[0.99]"
+        className="flex-1 min-w-0 text-left active:scale-[0.99] transition-transform"
       >
-        <p className="text-[13px] font-medium text-foreground truncate">{device.name}</p>
+        <p className="text-[15px] font-medium text-foreground truncate">{device.name}</p>
         <p className={cn(
-          "text-[11px] mt-0.5",
-          device.isOn ? "text-accent/70" : "text-foreground/35"
+          "text-[12px]",
+          device.isOn ? "text-[var(--minimalist-pastel-yellow-fg)]" : "text-muted"
         )}>
           {getDeviceStatus(device)}
         </p>
       </button>
+
       <button
         {...toggleTap}
         className={cn(
-          "w-10 h-5 rounded-full relative shrink-0 transition-colors",
-          device.isOn ? "bg-accent" : "bg-surface-raised"
+          "w-10 h-6 rounded-md relative shrink-0 transition-colors duration-200 ease-in-out",
+          device.isOn ? "bg-foreground" : "bg-muted/10 border border-border"
         )}
       >
         <div
           className={cn(
-            "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-out",
-            device.isOn ? "translate-x-5" : "translate-x-0.5"
+            "absolute top-1 w-4 h-4 rounded-sm transition-transform duration-200 ease-in-out",
+            device.isOn ? "translate-x-5 bg-background" : "translate-x-1 bg-muted/40"
           )}
         />
       </button>

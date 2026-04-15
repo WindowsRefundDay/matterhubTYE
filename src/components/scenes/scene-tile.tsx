@@ -19,15 +19,16 @@ export const SceneTile = memo(function SceneTile({
   return (
     <button
       {...tap}
-      className="flex flex-col gap-3 rounded-2xl border border-border/20 bg-surface p-4 text-left transition-[transform,background-color,border-color] active:scale-[0.98] active:bg-accent/10 active:border-accent/20"
+      className="flex w-full items-center gap-5 py-5 text-left border-b border-border last:border-0 active:scale-[0.98] transition-transform"
     >
-      <div className="w-10 h-10 rounded-xl bg-surface-raised flex items-center justify-center">
-        <Icon name={scene.icon} size={20} className="text-foreground/60" />
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg border bg-muted/5 text-muted border-border">
+        <Icon name={scene.icon} size={20} />
       </div>
-      <div>
-        <p className="text-[14px] font-medium text-foreground">{scene.name}</p>
-        <p className="text-[11px] text-foreground/35 mt-0.5">{scene.description}</p>
+      <div className="flex-1 min-w-0">
+        <p className="text-[15px] font-medium text-foreground">{scene.name}</p>
+        <p className="text-[12px] text-muted truncate">{scene.description}</p>
       </div>
+      <Icon name="chevron-right" size={16} className="text-muted" />
     </button>
   );
 });

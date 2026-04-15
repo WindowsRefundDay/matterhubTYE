@@ -49,7 +49,7 @@ export function AssistantHandle({
         data-assistant-handle=""
         data-state={state}
         className={cn(
-          "h-1.5 w-14 rounded-full bg-foreground/25 transition-colors duration-200",
+          "h-1 w-12 bg-muted/30 transition-colors duration-200 rounded-sm",
           className
         )}
       />
@@ -62,18 +62,18 @@ export function AssistantHandle({
       data-state={state}
       data-channel={channelLabel}
       className={cn(
-        "flex min-w-[220px] max-w-[320px] items-center gap-3 rounded-full border border-border/40 bg-surface px-4 py-2",
-        "shadow-[0_8px_16px_rgba(0,0,0,0.14)]",
+        "flex min-w-[240px] max-w-[340px] items-center gap-4 rounded-lg border border-border bg-background px-4 py-3",
+        "shadow-sm",
         className
       )}
     >
       <AssistantPulse state={state} />
 
-      <div className="min-w-0 flex-1 text-left">
-        <p className="text-[10px] uppercase tracking-[0.24em] text-foreground/45">
+      <div className="min-w-0 flex-1 text-left border-l border-border pl-4">
+        <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted">
           {hint ?? `${copy.label} ${channelLabel}`}
         </p>
-        <p className="truncate text-[13px] font-medium text-foreground/90">
+        <p className="truncate font-serif text-[18px] leading-tight text-foreground">
           {transcript?.trim() || copy.fallback}
         </p>
       </div>
@@ -83,17 +83,20 @@ export function AssistantHandle({
 
 function AssistantPulse({ state }: { state: AssistantHandleState }) {
   if (state === "drawer") {
-    return <div className="h-2 w-10 rounded-full bg-foreground/20" />;
+    return <div className="h-1.5 w-8 bg-muted/20 rounded-sm" />;
   }
+
+  const barCount = 3;
+  const bars = Array.from({ length: barCount });
 
   if (state === "idle" || state === "thinking") {
     return (
-      <div aria-hidden="true" className="flex h-8 items-end gap-1">
-        {[12, 20, 15].map((height, index) => (
+      <div aria-hidden="true" className="flex h-8 items-center gap-1.5">
+        {bars.map((_, index) => (
           <span
-            key={`${state}-${height}-${index}`}
-            className="w-1 rounded-full bg-foreground/45"
-            style={{ height }}
+            key={`${state}-${index}`}
+            className="w-1 bg-muted/40 rounded-sm"
+            style={{ height: [12, 20, 16][index] }}
           />
         ))}
       </div>
@@ -102,21 +105,24 @@ function AssistantPulse({ state }: { state: AssistantHandleState }) {
 
   const toneClass =
     state === "listening"
-      ? "bg-accent"
+      ? "bg-[var(--minimalist-pastel-blue-fg)]"
       : state === "speaking"
         ? "bg-foreground"
-        : "bg-foreground/60";
+        : "bg-muted";
 
   return (
     <div
       aria-hidden="true"
-      className="flex h-8 items-end gap-1"
+      className="flex h-8 items-center gap-1.5"
     >
-      {[12, 20, 15].map((height, index) => (
+      {bars.map((_, index) => (
         <span
-          key={`${state}-${height}-${index}`}
-          className={cn("w-1 rounded-full animate-pulse", toneClass)}
-          style={{ height, animationDelay: `${index * 120}ms` }}
+          key={`${state}-${index}`}
+          className={cn("w-1 rounded-sm animate-pulse", toneClass)}
+          style={{ 
+            height: [14, 24, 18][index], 
+            animationDelay: `${index * 150}ms` 
+          }}
         />
       ))}
     </div>

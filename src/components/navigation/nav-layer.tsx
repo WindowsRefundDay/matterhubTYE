@@ -216,6 +216,7 @@ export function NavLayer({ currentScreen, onSelect }: NavLayerProps) {
   return (
     <motion.div
       style={{ y, willChange: "transform", backfaceVisibility: "hidden" }}
+      data-theme="minimalist"
       transformTemplate={(_, generatedTransform) =>
         generatedTransform === "none" ? "translateZ(0)" : `${generatedTransform} translateZ(0)`
       }
@@ -232,7 +233,7 @@ export function NavLayer({ currentScreen, onSelect }: NavLayerProps) {
     >
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
         <motion.div
-          className="absolute inset-0 border-t border-border/30 bg-surface/85 backdrop-blur-lg"
+          className="absolute inset-0 border-t border-border bg-background"
           style={{
             scaleX: curveScaleX,
             borderTopLeftRadius: topCornerRadius,

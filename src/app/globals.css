@@ -11,6 +11,31 @@
   --border: #3f3f46;
   --glass: rgba(24, 24, 27, 0.7);
   --glass-border: rgba(63, 63, 70, 0.5);
+
+  /* Minimalist UI variables */
+  --minimalist-bg: #FBFBFA;
+  --minimalist-fg: #111111;
+  --minimalist-muted: #787774;
+  --minimalist-border: #EAEAEA;
+  --minimalist-pastel-red: #FDEBEC;
+  --minimalist-pastel-red-fg: #9F2F2D;
+  --minimalist-pastel-blue: #E1F3FE;
+  --minimalist-pastel-blue-fg: #1F6C9F;
+  --minimalist-pastel-green: #EDF3EC;
+  --minimalist-pastel-green-fg: #346538;
+  --minimalist-pastel-yellow: #FBF3DB;
+  --minimalist-pastel-yellow-fg: #956400;
+}
+
+[data-theme="minimalist"] {
+  --background: var(--minimalist-bg);
+  --foreground: var(--minimalist-fg);
+  --muted: var(--minimalist-muted);
+  --surface: #FFFFFF;
+  --surface-raised: #F9F9F8;
+  --border: var(--minimalist-border);
+  --accent: #111111;
+  --accent-dim: #333333;
 }
 
 @theme inline {
@@ -22,8 +47,9 @@
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
   --color-border: var(--border);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans), "SF Pro Display", "Geist Sans", "Helvetica Neue", sans-serif;
+  --font-serif: var(--font-instrument-serif), "Newsreader", "Playfair Display", serif;
+  --font-mono: var(--font-geist-mono), "Geist Mono", monospace;
 }
 
 * {
@@ -41,6 +67,10 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.grain-overlay {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
 
 .perf-panel {

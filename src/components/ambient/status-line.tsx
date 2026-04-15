@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useSmartHomeDevices } from "@/hooks/use-smart-home";
+import { Icon } from "@/components/ui/icon";
 
 export function StatusLine() {
   const { devices, activeDeviceCount } = useSmartHomeDevices();
@@ -23,22 +24,32 @@ export function StatusLine() {
     return { lock: lockState, lightsOn: nextLightsOn };
   }, [devices]);
 
-  let status: string;
-  if (activeDeviceCount === 0) {
-    status = "All devices off";
-  } else if (lightsOn === 0) {
-    status = `${activeDeviceCount} device${activeDeviceCount > 1 ? "s" : ""} active · All lights off`;
-  } else {
-    status = `${activeDeviceCount} device${activeDeviceCount > 1 ? "s" : ""} active · ${lightsOn} light${lightsOn > 1 ? "s" : ""} on`;
-  }
-
-  if (lock) {
-    status += " · Door locked";
-  }
-
   return (
-    <p className="text-[13px] font-light text-foreground/25 tracking-wide">
-      {status}
-    </p>
+    <div className="flex items-center gap-6 border-t border-border/40 pt-6 mt-2">
+      <div className="flex items-center gap-2">
+        <Icon name="grid" size={14} className="text-muted/60" />
+        <span className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-muted">
+          {activeDeviceCount} Devices Active
+        </span>
+      </div>
+      
+      {lightsOn > 0 && (
+        <div className="flex items-center gap-2">
+          <Icon name="light-bulb" size={14} className="text-[var(--minimalist-pastel-yellow-fg)]" />
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--minimalist-pastel-yellow-fg)]">
+            {lightsOn} Lights On
+          </span>
+        </div>
+      )}
+
+      {lock && (
+        <div className="flex items-center gap-2">
+          <Icon name="lock" size={14} className="text-[var(--minimalist-pastel-green-fg)]" />
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--minimalist-pastel-green-fg)]">
+            Secured
+          </span>
+        </div>
+      )}
+    </div>
   );
 }

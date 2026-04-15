@@ -17,30 +17,32 @@ export const RoomTile = memo(function RoomTile({
   activeCount,
   onSelect,
 }: RoomTileProps) {
-  const total = room.deviceIds.length;
   const tap = useTap(() => onSelect(room.id));
 
   return (
     <button
       {...tap}
-      className={cn(
-        "flex flex-col gap-3 rounded-2xl border bg-surface p-4 text-left transition-[transform,background-color]",
-        "active:scale-[0.98] active:bg-surface-raised"
-      )}
+      className="flex w-full items-center gap-5 py-5 text-left border-b border-border last:border-0 active:scale-[0.98] transition-transform"
     >
-      <div className="flex items-center justify-between">
-        <div className="w-10 h-10 rounded-xl bg-surface-raised flex items-center justify-center">
-          <Icon name={room.icon} size={20} className="text-foreground/60" />
-        </div>
-        {activeCount > 0 && (
-          <div className="w-2 h-2 rounded-full bg-accent" />
-        )}
+      <div className={cn(
+        "flex h-12 w-12 items-center justify-center rounded-lg border",
+        activeCount > 0 ? "bg-foreground text-background border-foreground" : "bg-muted/5 text-muted border-border"
+      )}>
+        <Icon name={room.icon} size={20} />
       </div>
-      <div>
-        <p className="text-[14px] font-medium text-foreground">{room.name}</p>
-        <p className="text-[12px] text-foreground/40 mt-0.5">
-          {activeCount}/{total} active
+      <div className="flex-1 min-w-0">
+        <p className="text-[15px] font-medium text-foreground">{room.name}</p>
+        <p className="text-[12px] text-muted">
+          {activeCount > 0 ? `${activeCount} active` : "All off"}
         </p>
+      </div>
+      <div className="flex items-center gap-3">
+        {activeCount > 0 && (
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--minimalist-pastel-green-fg)] bg-[var(--minimalist-pastel-green)] px-2 py-0.5 rounded-sm">
+            Active
+          </span>
+        )}
+        <Icon name="chevron-right" size={16} className="text-muted" />
       </div>
     </button>
   );

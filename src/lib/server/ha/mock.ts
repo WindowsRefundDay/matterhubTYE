@@ -2,7 +2,7 @@ import { initialDevices } from "@/data/devices";
 import { rooms } from "@/data/rooms";
 import { scenes } from "@/data/scenes";
 import { mockWeather } from "@/data/weather";
-import type { SmartHomeSnapshot } from "./types";
+import type { SmartHomeSnapshot } from "@/types/smart-home";
 
 export function buildMockSmartHomeSnapshot(): SmartHomeSnapshot {
   return {

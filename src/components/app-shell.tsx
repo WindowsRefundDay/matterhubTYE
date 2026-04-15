@@ -7,6 +7,7 @@ import {
   useSmartHomeDevices,
   useSmartHomeStaticData,
 } from "@/hooks/use-smart-home";
+import { useDisplayState } from "@/hooks/use-display-state";
 import { useIdleTimer } from "@/hooks/use-idle-timer";
 import { cn } from "@/lib/utils";
 import { DeviceFrame } from "./device-frame";
@@ -74,82 +75,48 @@ export function AppShell() {
     goHome,
   } = useSmartHomeActions();
 
-  const [displayState, setDisplayState] = useState<DisplayState>(DEFAULT_DISPLAY_STATE);
+  const {
+    data: displayStateValue,
+    performAction: performDisplayAction,
+  } = useDisplayState({
+    initialState: DEFAULT_DISPLAY_STATE,
+    pollMs: 10000,
+  });
   const [minuteTick, setMinuteTick] = useState(() => Date.now());
+  const displayState = displayStateValue ?? DEFAULT_DISPLAY_STATE;
   const { mode, screen, selectedRoomId, selectedDeviceId } = appState;
   const ambientVisible = mode === "ambient" || mode === "nav";
   const screenVisible = mode === "screen" || mode === "detail";
 
-  const fetchDisplayState = useCallback(async () => {
-    try {
-      const response = await fetch("/api/system/display", { cache: "no-store" });
-      if (!response.ok) {
-        return;
-      }
-      const payload = (await response.json()) as DisplayState;
-      setDisplayState(payload);
-    } catch {
-      // non-critical; preserve the last known display state
-    }
-  }, []);
-
   const setDisplayPower = useCallback(async (on: boolean) => {
     try {
-      const response = await fetch("/api/system/display", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "set_power", on }),
-      });
-
-      if (response.ok) {
-        const payload = (await response.json()) as DisplayState;
-        setDisplayState(payload);
-      }
+      await performDisplayAction({ action: "set_power", on });
     } catch {
       // ignore and preserve current state
     }
-  }, []);
+  }, [performDisplayAction]);
 
   const setDisplayBrightness = useCallback(async (brightnessPercent: number) => {
     try {
-      const response = await fetch("/api/system/display", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      await performDisplayAction({
           action: "set_brightness",
           brightnessPercent,
           persist: false,
-        }),
       });
-
-      if (response.ok) {
-        const payload = (await response.json()) as DisplayState;
-        setDisplayState(payload);
-      }
     } catch {
       // ignore and preserve current state
     }
-  }, []);
+  }, [performDisplayAction]);
 
   useEffect(() => {
-    const initialRefresh = window.setTimeout(() => {
-      void fetchDisplayState();
-    }, 0);
-
-    const interval = window.setInterval(() => {
-      void fetchDisplayState();
-    }, 10000);
-
     const minuteInterval = window.setInterval(() => {
       setMinuteTick(Date.now());
     }, 60000);
 
     return () => {
-      window.clearTimeout(initialRefresh);
-      window.clearInterval(interval);
       window.clearInterval(minuteInterval);
     };
-  }, [fetchDisplayState]);
+  }, []);
 
   const withinDayWindow = useMemo(
     () =>
@@ -307,41 +274,48 @@ export function AppShell() {
 
   return (
     <DeviceFrame>
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-zinc-900/80" />
-
       <div
         className={cn(
-          "absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 transition-opacity duration-300 perf-panel",
+          "absolute inset-0 z-10 flex flex-col items-center justify-center gap-8 transition-opacity duration-500 ease-in-out perf-panel",
           ambientVisible ? "opacity-100" : "pointer-events-none opacity-0"
         )}
+        data-theme="minimalist"
+        style={{ backgroundColor: "var(--background)" }}
         onPointerDown={ambientVisible ? handleAmbientTap : undefined}
       >
+        <div className="absolute inset-0 pointer-events-none opacity-[0.03] grain-overlay" />
+        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_120%,var(--minimalist-pastel-blue)_0%,transparent_50%)] opacity-[0.15]" />
+        
         <AmbientClock active={ambientVisible} />
-        <WeatherDisplay weather={weather} />
-        <StatusLine />
+        <div className="flex flex-col items-center gap-4 mt-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+          <WeatherDisplay weather={weather} />
+          <StatusLine />
+        </div>
       </div>
 
       <NavLayer currentScreen={screen} onSelect={handleNavSelect} />
 
       <div
+        data-theme="minimalist"
         className={cn(
-          "absolute inset-0 z-20 flex flex-col transition-[opacity,transform] duration-200 ease-out perf-panel",
+          "absolute inset-0 z-20 flex flex-col transition-[opacity,transform] duration-200 ease-out perf-panel bg-background",
           screenVisible
             ? "translate-y-0 opacity-100"
             : "pointer-events-none translate-y-2 opacity-0"
         )}
       >
-        <div className="flex items-center gap-3 px-5 pt-4 pb-3">
-          <button
-            onPointerDown={goBack}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface/80 text-foreground/50 transition-transform active:scale-90"
-          >
-            <Icon name="chevron-left" size={18} />
-          </button>
-          <div className="flex-1" />
-        </div>
+        {screen !== "settings" && (
+          <div className="absolute top-8 right-6 z-20">
+            <button
+              onPointerDown={goBack}
+              className="flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-background text-muted transition-all active:scale-90"
+            >
+              <Icon name="x" size={20} />
+            </button>
+          </div>
+        )}
 
-        <div className="flex-1 overflow-hidden px-5 pb-20 perf-panel">
+        <div className="flex-1 overflow-hidden perf-panel">
           <ScreenRenderer
             screen={screen}
             onSelectRoom={selectRoom}

@@ -1,4 +1,9 @@
-import type { Device, Room, Scene, WeatherData } from "@/types";
+import type {
+  SmartHomeActionRequest,
+  SmartHomeDiagnostic,
+  SmartHomeEntityReference,
+  SmartHomeSnapshot,
+} from "@/types/smart-home";
 
 export interface HomeAssistantState {
   entity_id: string;
@@ -46,32 +51,6 @@ export interface HomeAssistantBootstrapSource {
   entityRegistry?: HomeAssistantEntityRegistryEntry[];
 }
 
-export interface SmartHomeDiagnostic {
-  level: "info" | "warn" | "error";
-  code: string;
-  message: string;
-  entityId?: string;
-}
-
-export interface SmartHomeEntityReference {
-  entityId: string;
-  domain: string;
-  deviceId: string;
-  roomId?: string;
-  supportedActions: string[];
-}
-
-export interface SmartHomeSnapshot {
-  mode: "home-assistant" | "mock";
-  generatedAt: string;
-  rooms: Room[];
-  devices: Device[];
-  scenes: Scene[];
-  weather: WeatherData | null;
-  diagnostics: SmartHomeDiagnostic[];
-  entityReferences: Record<string, SmartHomeEntityReference>;
-}
-
 export interface HomeAssistantRuntimeConfig {
   mode: "home-assistant" | "mock";
   baseUrl: string;
@@ -90,9 +69,9 @@ export interface HomeAssistantServiceCall {
   serviceData?: Record<string, unknown>;
 }
 
-export type SmartHomeActionRequest =
-  | { kind: "toggle_device"; entityId: string; turnOn?: boolean }
-  | { kind: "set_device_value"; entityId: string; value: number }
-  | { kind: "set_temperature"; entityId: string; temperature: number }
-  | { kind: "set_lock_state"; entityId: string; locked: boolean }
-  | { kind: "activate_scene"; entityId: string };
+export type {
+  SmartHomeActionRequest,
+  SmartHomeDiagnostic,
+  SmartHomeEntityReference,
+  SmartHomeSnapshot,
+};

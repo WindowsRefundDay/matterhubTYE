@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:mock": "MATTERHUB_SYSTEM_MODE=mock next dev",
+    "dev:hardware": "MATTERHUB_SYSTEM_MODE=hardware next dev",
     "build": "next build",
     "start": "next start",
     "start:standalone": "HOSTNAME=127.0.0.1 PORT=3000 node .next/standalone/server.js",

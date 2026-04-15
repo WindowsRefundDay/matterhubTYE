@@ -26,15 +26,22 @@ export function RoomDetail({ roomId }: RoomDetailProps) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {devices.map((device) => (
-        <DeviceTile
-          key={device.id}
-          device={device}
-          onToggle={toggleDevice}
-          onSelect={selectDevice}
-        />
-      ))}
+    <div className="flex flex-col">
+      <div className="mb-4">
+        <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted border-l-2 border-foreground pl-3">
+          Devices in {room.name}
+        </h2>
+      </div>
+      <div className="flex flex-col">
+        {devices.map((device) => (
+          <DeviceTile
+            key={device.id}
+            device={device}
+            onToggle={toggleDevice}
+            onSelect={selectDevice}
+          />
+        ))}
+      </div>
     </div>
   );
 }

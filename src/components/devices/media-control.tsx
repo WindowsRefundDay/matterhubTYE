@@ -11,46 +11,53 @@ export function MediaControl({ device }: { device: Device }) {
   const toggleTap = useTap(() => toggleDevice(device.id));
 
   return (
-    <div className="space-y-5">
+    <div data-theme="minimalist" className="space-y-8 py-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <div className={cn(
-            "w-12 h-12 rounded-xl flex items-center justify-center",
-            device.isOn ? "bg-accent/20 text-accent" : "bg-surface-raised text-foreground/40"
+            "w-14 h-14 rounded-xl flex items-center justify-center border transition-all",
+            device.isOn 
+              ? "bg-[var(--minimalist-pastel-blue)] text-[var(--minimalist-pastel-blue-fg)] border-[var(--minimalist-pastel-blue-fg)]/20" 
+              : "bg-muted/5 text-muted border-border"
           )}>
-            <Icon name="tv" size={24} />
+            <Icon name="tv" size={28} />
           </div>
           <div>
-            <p className="text-[15px] font-medium">{device.name}</p>
-            <p className="text-[12px] text-foreground/40">
-              {device.isOn ? device.mediaTitle || "On" : "Off"}
+            <h3 className="text-[16px] font-medium tracking-tight text-foreground">{device.name}</h3>
+            <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted mt-1">
+              {device.isOn ? device.mediaTitle || "Active" : "Standby"}
             </p>
           </div>
         </div>
         <button
           {...toggleTap}
           className={cn(
-            "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
-            device.isOn ? "bg-accent text-black" : "bg-surface-raised text-foreground/60"
+            "w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90",
+            device.isOn 
+              ? "bg-foreground text-background" 
+              : "bg-background text-foreground border border-border"
           )}
         >
-          <Icon name="power" size={18} />
+          <Icon name="power" size={20} />
         </button>
       </div>
+
       {device.isOn && (
-        <div className="space-y-2">
-          <div className="flex justify-between text-[12px] text-foreground/40">
-            <span>Volume</span>
-            <span>{device.value || 30}%</span>
+        <div className="space-y-4 pt-4">
+          <div className="flex justify-between items-end">
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted">Acoustic Output</span>
+            <span className="text-[14px] font-mono text-foreground">{device.value || 30}%</span>
           </div>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={device.value || 30}
-            onChange={(e) => setDeviceValue(device.id, Number(e.target.value))}
-            className="w-full h-1.5 rounded-full appearance-none bg-surface-raised [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow-md"
-          />
+          <div className="relative flex items-center h-8">
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={device.value || 30}
+              onChange={(e) => setDeviceValue(device.id, Number(e.target.value))}
+              className="w-full h-[2px] rounded-full appearance-none bg-border [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:rounded-md [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-border [&::-webkit-slider-thumb]:shadow-sm transition-all"
+            />
+          </div>
         </div>
       )}
     </div>

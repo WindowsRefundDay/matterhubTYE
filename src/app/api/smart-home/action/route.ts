@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireHomeAssistantConfig } from "@/lib/server/ha/config";
 import { HomeAssistantRestClient } from "@/lib/server/ha/rest";
 import { resolveHomeAssistantServiceCall } from "@/lib/server/ha/service-actions";
-import type { SmartHomeActionRequest } from "@/lib/server/ha/types";
+import type { SmartHomeActionRequest } from "@/types/smart-home";
 
 export async function POST(request: NextRequest) {
   const payload = (await request.json()) as SmartHomeActionRequest;

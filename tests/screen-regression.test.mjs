@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { renderCompiledWithProvider } from "./test-helpers.mjs";
+import { renderCompiled, renderCompiledWithProvider } from "./test-helpers.mjs";
 
 test("ScreenRenderer preserves panel routing for key screens", async () => {
   const sharedProps = {
@@ -61,6 +61,40 @@ test("SettingsPanel preserves the appliance status summary block", async () => {
   assert.match(html, /Awaiting appliance provisioning/);
   assert.match(html, /Home Assistant pairing is not configured yet/);
   assert.match(html, /Setup preview/);
+  assert.match(html, /Test audio/);
+  assert.match(html, /Audio output/);
   assert.match(html, /800 x 480/);
   assert.doesNotMatch(html, />Connected</);
+});
+
+test("AudioPlayerPanel preserves the full-screen audio test shell", async () => {
+  const html = await renderCompiled(
+    "components/settings/audio-player-panel",
+    "AudioPlayerPanel",
+    {
+      track: {
+        id: "showtime-reference",
+        title: "Rolling Like This",
+        artist: "Don Toliver",
+        src: "/audio/showtime-reference.mp3",
+        accentLabel: "Showtime reference",
+      },
+      outputId: "system-default",
+      outputLabel: "System default",
+      support: {
+        enumerateDevices: true,
+        setSinkId: true,
+        selectAudioOutput: true,
+        secureContext: true,
+      },
+      onLogEvent: () => undefined,
+      onBack: () => undefined,
+    }
+  );
+
+  assert.match(html, /Audio pipeline test/i);
+  assert.match(html, /Rolling Like This/);
+  assert.match(html, /Don Toliver/);
+  assert.match(html, /System default/);
+  assert.match(html, /Testing local playback pipeline/i);
 });

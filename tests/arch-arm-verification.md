@@ -27,3 +27,11 @@ npm run build
 - Replace placeholder Settings assertions with real HA connectivity/degraded-state assertions.
 - Add fixture-backed tests for HA entity mapping and setup/provisioning state.
 - Add proof commands for image/profile build outputs when the image lane commits them.
+
+## Audio output validation notes
+
+- The audio test flow now logs to `.tmp/audio-test-events.jsonl` by default.
+- The browser can also expose recent events at `/api/system/audio-test-log`.
+- On a Pi, validate both:
+  - whether audio is actually heard from the expected sink
+  - whether the logs report `audio_test_sink_applied` or `audio_test_sink_failed`

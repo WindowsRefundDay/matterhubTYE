@@ -23,11 +23,15 @@ import { initialDevices } from "@/data/devices";
 import { rooms as initialRooms } from "@/data/rooms";
 import { scenes as initialScenes } from "@/data/scenes";
 import { mockWeather } from "@/data/weather";
+import {
+  fetchSmartHomeSnapshot,
+  postSmartHomeAction,
+} from "@/lib/client/smart-home-api";
 import type {
   SmartHomeActionRequest,
   SmartHomeDiagnostic,
   SmartHomeSnapshot,
-} from "@/lib/server/ha/types";
+} from "@/types/smart-home";
 
 interface SmartHomeStaticDataValue {
   rooms: Room[];
@@ -68,23 +72,6 @@ interface SmartHomeRuntimeValue {
   refresh: () => Promise<void>;
 }
 
-interface BootstrapResponseSuccess {
-  status: "ok" | "degraded";
-  snapshot: SmartHomeSnapshot;
-}
-
-interface BootstrapResponseError {
-  status: "error";
-  error?: string;
-  details?: string[];
-}
-
-type BootstrapResponse = BootstrapResponseSuccess | BootstrapResponseError;
-
-type ActionResponse =
-  | { status: "ok" }
-  | { status: "error"; error?: string };
-
 const EMPTY_DEVICES: Device[] = [];
 const BOOTSTRAP_POLL_MS = 15000;
 
@@ -123,10 +110,7 @@ export function SmartHomeProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const response = await fetch("/api/smart-home/bootstrap", {
-        cache: "no-store",
-      });
-      const payload = (await response.json()) as BootstrapResponse;
+      const payload = await fetchSmartHomeSnapshot();
 
       if (payload.status === "ok" || payload.status === "degraded") {
         applySnapshot(payload.snapshot);
@@ -160,23 +144,7 @@ export function SmartHomeProvider({ children }: { children: ReactNode }) {
 
   const runAction = useCallback(
     async (request: SmartHomeActionRequest) => {
-      const response = await fetch("/api/smart-home/action", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(request),
-      });
-
-      const payload = (await response.json()) as ActionResponse;
-      if (!response.ok || payload.status !== "ok") {
-        throw new Error(
-          "error" in payload && payload.error
-            ? payload.error
-            : "Smart-home action failed."
-        );
-      }
-
+      await postSmartHomeAction(request);
       await refresh();
     },
     [refresh]

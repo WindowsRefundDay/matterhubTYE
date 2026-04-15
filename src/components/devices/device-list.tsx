@@ -34,31 +34,40 @@ export function DeviceList({ onSelectDevice }: DeviceListProps) {
   }, [devices]);
 
   return (
-    <div className="h-full flex flex-col">
-      <h1 className="text-[20px] font-medium text-foreground mb-4">Devices</h1>
-      <div className="flex-1 overflow-y-auto scrollbar-hide space-y-5 perf-scroll-region">
+    <div className="relative h-full bg-background overflow-hidden">
+      <div className="absolute top-0 inset-x-0 z-10 px-6 pt-8 pb-12 bg-gradient-to-b from-background via-background to-transparent pointer-events-none">
+        <h1 className="font-serif text-[32px] tracking-tight text-foreground pointer-events-auto">Devices</h1>
+      </div>
+
+      <div className="perf-scroll-region h-full space-y-12 overflow-y-auto scrollbar-hide px-6 pt-28 pb-32">
         {categoryOrder.map((category) => {
           const items = grouped[category];
           if (!items || items.length === 0) return null;
           return (
-            <section key={category} className="perf-section">
-              <h2 className="text-[13px] font-medium text-foreground/40 uppercase tracking-wider mb-2">
-                {categoryLabels[category]}
-              </h2>
-              <div className="grid grid-cols-2 gap-2">
-                {items.map((device) => (
-                  <DeviceTile
-                    key={device.id}
-                    device={device}
-                    onToggle={toggleDevice}
-                    onSelect={onSelectDevice}
-                  />
-                ))}
-              </div>
-            </section>
+            <Section key={category} title={categoryLabels[category]}>
+              {items.map((device) => (
+                <DeviceTile
+                  key={device.id}
+                  device={device}
+                  onToggle={toggleDevice}
+                  onSelect={onSelectDevice}
+                />
+              ))}
+            </Section>
           );
         })}
       </div>
     </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="perf-section">
+      <h2 className="mb-4 text-[11px] font-bold uppercase tracking-[0.15em] text-muted border-l-2 border-foreground pl-3">
+        {title}
+      </h2>
+      <div className="flex flex-col">{children}</div>
+    </section>
   );
 }
