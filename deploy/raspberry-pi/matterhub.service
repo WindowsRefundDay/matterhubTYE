@@ -5,12 +5,14 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=pi
-Group=pi
+User=matter
+Group=matter
 WorkingDirectory=/opt/matterhub
 Environment=NODE_ENV=production
 Environment=HOSTNAME=127.0.0.1
 Environment=PORT=3000
+Environment=MATTERHUB_HOME_ASSISTANT_TOKEN_FILE=/etc/matterhub/ha.token
+Environment=MATTERHUB_HOME_ASSISTANT_URL=http://127.0.0.1:8123
 ExecStart=/usr/bin/node /opt/matterhub/server.js
 Restart=always
 RestartSec=3

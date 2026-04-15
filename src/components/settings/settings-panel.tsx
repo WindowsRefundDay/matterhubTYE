@@ -244,8 +244,8 @@ export function SettingsPanel() {
 
   return (
     <div data-theme="minimalist" className="relative h-full bg-background overflow-hidden">
-      <div className="absolute top-0 inset-x-0 z-10 px-6 pt-8 pb-12 bg-gradient-to-b from-background via-background to-transparent pointer-events-none">
-        <h1 className="font-serif text-[32px] tracking-tight text-foreground pointer-events-auto">Settings</h1>
+      <div className="corner-fade-header absolute top-0 inset-x-0 z-10 px-6 pt-8 pb-12 pointer-events-none">
+        <h1 className="relative font-serif text-[32px] tracking-tight text-foreground pointer-events-auto">Settings</h1>
       </div>
 
       <div className="perf-scroll-region h-full space-y-12 overflow-y-auto scrollbar-hide px-6 pt-28 pb-32">
@@ -314,6 +314,13 @@ export function SettingsPanel() {
 
         <Section title="Appearance">
           <SettingRow label="Dark Mode" description="Optimized for ambient display" toggle isOn={darkMode} />
+          <SettingRow
+            label="Notifications"
+            description="Allow kiosk status prompts"
+            toggle
+            isOn={notifications}
+            onToggle={() => setNotifications((enabled) => !enabled)}
+          />
           <SettingRow label="Clock Format" value="12-HOUR" />
         </Section>
 
@@ -354,7 +361,12 @@ export function SettingsPanel() {
             <div className="min-w-0 flex-1">
               <p className="text-[15px] font-medium text-foreground">Output Test</p>
               <p className="text-[12px] text-muted truncate">
-                {audioError ?? (isPlaying ? `Playing: ${audioOutput.label}` : "Play reference track")}
+                {audioError ??
+                  (audioOutputsLoading
+                    ? "Checking output routes"
+                    : isPlaying
+                      ? `Playing: ${audioOutput.label}`
+                      : "Play reference track")}
               </p>
             </div>
           </div>
@@ -407,6 +419,10 @@ export function SettingsPanel() {
         <Section title="Appliance Info">
           <SettingRow label="Platform" value="ARCH ARM" />
           <SettingRow label="Runtime" value="PRODUCTION" />
+          <SettingRow
+            label="Diagnostics"
+            value={diagnostics.length > 0 ? `${diagnostics.length} ITEMS` : "CLEAR"}
+          />
           <SettingRow label="Version" value="0.8.2-STABLE" />
         </Section>
 

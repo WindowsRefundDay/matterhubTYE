@@ -9,8 +9,8 @@ export function SceneList() {
 
   return (
     <div className="relative h-full bg-background overflow-hidden">
-      <div className="absolute top-0 inset-x-0 z-10 px-6 pt-8 pb-12 bg-gradient-to-b from-background via-background to-transparent pointer-events-none">
-        <h1 className="font-serif text-[32px] tracking-tight text-foreground pointer-events-auto">Scenes</h1>
+      <div className="corner-fade-header absolute top-0 inset-x-0 z-10 px-6 pt-8 pb-12 pointer-events-none">
+        <h1 className="relative font-serif text-[32px] tracking-tight text-foreground pointer-events-auto">Scenes</h1>
       </div>
 
       <div className="perf-scroll-region h-full space-y-12 overflow-y-auto scrollbar-hide px-6 pt-28 pb-32">

@@ -21,7 +21,7 @@ import { RoomDetail } from "./rooms/room-detail";
 import { DeviceControl } from "./devices/device-control";
 import { Icon } from "./ui/icon";
 import type { Screen } from "@/types";
-import type { DisplayState } from "@/types/system";
+import type { DisplayState, DisplayVisualPhase } from "@/types/system";
 
 const DEFAULT_DISPLAY_STATE: DisplayState = {
   supported: false,
@@ -38,6 +38,26 @@ const DEFAULT_DISPLAY_STATE: DisplayState = {
   dayStartsAt: "07:00",
   nightStartsAt: "22:00",
 };
+
+export function getDisplayVisualPhase(displayState: DisplayState): DisplayVisualPhase {
+  if (
+    displayState.supported &&
+    (!displayState.screenOn || displayState.brightnessPercent <= 0)
+  ) {
+    return "off";
+  }
+
+  if (
+    displayState.supported &&
+    displayState.screenOn &&
+    displayState.brightnessPercent > 0 &&
+    displayState.brightnessPercent <= displayState.dimmedBrightnessPercent
+  ) {
+    return "mid-dim";
+  }
+
+  return "awake";
+}
 
 function parseClockMinutes(value: string) {
   const [hoursRaw, minutesRaw] = value.split(":");
@@ -87,6 +107,9 @@ export function AppShell() {
   const { mode, screen, selectedRoomId, selectedDeviceId } = appState;
   const ambientVisible = mode === "ambient" || mode === "nav";
   const screenVisible = mode === "screen" || mode === "detail";
+  // Keep dimming visuals cheap: the Pi may be handling a backlight command at the same time.
+  const displayVisualPhase = getDisplayVisualPhase(displayState);
+  const isMidDim = displayVisualPhase === "mid-dim";
 
   const setDisplayPower = useCallback(async (on: boolean) => {
     try {
@@ -125,11 +148,6 @@ export function AppShell() {
     [displayState.dayStartsAt, displayState.keepAwakeDuringDay, displayState.nightStartsAt, minuteTick]
   );
 
-  const isDimmed =
-    displayState.screenOn &&
-    displayState.brightnessPercent > 0 &&
-    displayState.brightnessPercent <= displayState.dimmedBrightnessPercent;
-
   useEffect(() => {
     if (!displayState.supported) {
       return;
@@ -167,7 +185,7 @@ export function AppShell() {
       }
 
       dimTimer = window.setTimeout(() => {
-        if (displayState.screenOn && !isDimmed) {
+        if (displayState.screenOn && !isMidDim) {
           void setDisplayBrightness(displayState.dimmedBrightnessPercent);
         }
       }, displayState.dimAfterSeconds * 1000);
@@ -181,7 +199,7 @@ export function AppShell() {
 
     const handleActivity = () => {
       if (displayState.screenOn) {
-        if (isDimmed) {
+        if (isMidDim) {
           void setDisplayBrightness(displayState.preferredBrightnessPercent);
         }
         armTimers();
@@ -218,7 +236,7 @@ export function AppShell() {
     displayState.screenOn,
     displayState.supported,
     displayState.turnOffAfterSeconds,
-    isDimmed,
+    isMidDim,
     setDisplayBrightness,
     setDisplayPower,
     withinDayWindow,
@@ -276,10 +294,11 @@ export function AppShell() {
     <DeviceFrame>
       <div
         className={cn(
-          "absolute inset-0 z-10 flex flex-col items-center justify-center gap-8 transition-opacity duration-500 ease-in-out perf-panel",
+          "absolute inset-0 z-10 flex flex-col items-center justify-center gap-8 transition-[background-color,opacity] duration-500 ease-out perf-panel",
           ambientVisible ? "opacity-100" : "pointer-events-none opacity-0"
         )}
         data-theme="minimalist"
+        data-display-phase={displayVisualPhase}
         style={{ backgroundColor: "var(--background)" }}
         onPointerDown={ambientVisible ? handleAmbientTap : undefined}
       >
@@ -293,7 +312,11 @@ export function AppShell() {
         </div>
       </div>
 
-      <NavLayer currentScreen={screen} onSelect={handleNavSelect} />
+      <NavLayer
+        currentScreen={screen}
+        displayPhase={displayVisualPhase}
+        onSelect={handleNavSelect}
+      />
 
       <div
         data-theme="minimalist"

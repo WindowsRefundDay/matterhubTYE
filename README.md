@@ -20,7 +20,7 @@ npm run dev:hardware
 
 For production Raspberry Pi deployment, build the standalone bundle with `npm run build` and launch it with `npm run start:standalone`. Deployment assets for `systemd` and `labwc` kiosk startup live in `deploy/raspberry-pi/README.md`.
 
-For the approved Arch Linux ARM appliance direction, see `docs/arch-rpi4-appliance.md`, the review notes in `docs/arch-rpi4-code-review.md`, and the preview setup/maintenance routes at `/setup` and `/maintenance` during local development.
+The primary production target is Raspberry Pi OS 64-bit Bookworm with the `labwc` kiosk flow documented in `deploy/raspberry-pi/README.md`. The Arch Linux ARM image work under `image/arch-rpi4/` is legacy/reference material, not the main deployment path.
 
 For the agent-friendly repo boundary and feature workflow, see `docs/development/kiosk-dev-workflow.md`.
 

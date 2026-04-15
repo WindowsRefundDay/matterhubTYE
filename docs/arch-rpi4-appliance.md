@@ -1,11 +1,13 @@
-# MatterHub Arch ARM appliance target
+# MatterHub Arch ARM appliance reference
 
-Status: approved execution target for the Raspberry Pi 4B 4 GB appliance effort
-Last updated: 2026-04-03
+Status: legacy/reference architecture; Raspberry Pi OS deployment is the primary path
+Last updated: 2026-04-15
 
 ## Goal
 
-Ship a single reusable Arch Linux ARM (`aarch64`) SD-card image for Raspberry Pi 4B 4 GB that:
+This document preserves the earlier Arch Linux ARM (`aarch64`) appliance design for reference. It is not the active production deployment path. Current production deployment targets Raspberry Pi OS 64-bit Bookworm with `labwc`, Chromium kiosk mode, and the Next.js standalone bundle documented in `deploy/raspberry-pi/README.md`.
+
+The legacy Arch image direction was intended to ship a single reusable SD-card image for Raspberry Pi 4B 4 GB that:
 
 - boots straight into an appliance experience instead of a desktop session
 - runs Home Assistant Container locally
@@ -16,13 +18,13 @@ Ship a single reusable Arch Linux ARM (`aarch64`) SD-card image for Raspberry Pi
 
 ## Current repo baseline
 
-The repo currently ships a kiosk UI shell and a Raspberry Pi OS deployment path, but not the approved appliance architecture.
+The repo ships a kiosk UI shell and the primary Raspberry Pi OS deployment path. The Arch ARM image assets are legacy/reference material and should not supersede the Raspberry Pi OS flow.
 
-| Area | Current baseline | Required appliance outcome |
+| Area | Current baseline | Legacy Arch appliance outcome |
 | --- | --- | --- |
 | Smart-home data | Client-only mock state in `src/hooks/use-smart-home.tsx` and `src/data/*` | Server-backed Home Assistant integration with explicit dev-only mock mode |
 | Settings truthfulness | Placeholder connection card in `src/components/settings/settings-panel.tsx` | Live Home Assistant / kiosk / provisioning health reporting |
-| Deployment docs | Raspberry Pi OS + `labwc` flow in `deploy/raspberry-pi/*` | Arch ARM image builder, services, and maintenance flow |
+| Deployment docs | Primary Raspberry Pi OS + `labwc` flow in `deploy/raspberry-pi/*` | Legacy Arch ARM image builder, services, and maintenance flow |
 | Verification | Presentation-focused tests in `tests/` | Unit + integration + device validation for HA, setup, degraded mode, and image build |
 
 ## Target runtime shape
@@ -60,7 +62,7 @@ The browser should always open the local MatterHub origin. The app decides wheth
 
 ## Lane ownership map
 
-The approved implementation is split into five lanes. This document is meant to keep the boundaries clear while those lanes land incrementally.
+The legacy implementation was split into five lanes. This document is meant to preserve those boundaries for reference if the Arch path is revisited.
 
 | Lane | Primary focus | Expected repo touchpoints |
 | --- | --- | --- |
@@ -94,7 +96,7 @@ The approved implementation is split into five lanes. This document is meant to 
 
 ## Documentation checkpoints for implementation
 
-Before calling the appliance work complete, docs should cover:
+Before reviving the Arch appliance work, docs should cover:
 
 - how to build the Arch ARM image from a clean Linux host
 - the runtime directory and secret layout
@@ -106,7 +108,7 @@ Before calling the appliance work complete, docs should cover:
 
 ## Verification checklist
 
-Use this checklist to keep implementation aligned with the approved test spec.
+Use this checklist if reviving the legacy Arch implementation.
 
 - [ ] `npm run lint`
 - [ ] `npm test`
@@ -120,6 +122,6 @@ Use this checklist to keep implementation aligned with the approved test spec.
 
 ## Notes for follow-on contributors
 
-- Treat `deploy/raspberry-pi/*` as the legacy Raspberry Pi OS path until the Arch ARM appliance assets replace it.
-- Keep new appliance documentation separate from the old deployment flow until the migration is complete.
-- Prefer additive docs in `docs/` while image and runtime assets are still landing across multiple lanes.
+- Treat `deploy/raspberry-pi/*` as the primary Raspberry Pi OS deployment path.
+- Treat `image/arch-rpi4/*` and this document as legacy/reference material unless the project explicitly reopens that path.
+- Keep future appliance documentation explicit about whether it targets Raspberry Pi OS or the legacy Arch image.

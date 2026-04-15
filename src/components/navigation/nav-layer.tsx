@@ -12,10 +12,12 @@ import {
 import type { ValueAnimationTransition } from "motion-dom";
 import { AssistantHandle } from "@/components/assistant/assistant-handle";
 import { NavItem } from "./nav-item";
+import type { DisplayVisualPhase } from "@/types/system";
 import type { Screen } from "@/types";
 
 interface NavLayerProps {
   currentScreen: Screen;
+  displayPhase?: DisplayVisualPhase;
   onSelect: (screen: Screen) => void;
 }
 
@@ -37,7 +39,11 @@ type DrawerTransition = ValueAnimationTransition<number>;
 
 type SnapPoint = "closed" | "open" | "full";
 
-export function NavLayer({ currentScreen, onSelect }: NavLayerProps) {
+export function NavLayer({
+  currentScreen,
+  displayPhase = "awake",
+  onSelect,
+}: NavLayerProps) {
   const initialClosedTop = Math.max(INITIAL_VIEWPORT_HEIGHT - PEEK_HEIGHT, FULL_TOP);
 
   const [snapPoint, setSnapPoint] = useState<SnapPoint>("closed");
@@ -110,6 +116,9 @@ export function NavLayer({ currentScreen, onSelect }: NavLayerProps) {
   );
 
   const contentOpacity = useTransform(y, (top) => getOpenProgress(top));
+  const drawerSurfaceHeight = useTransform(y, (top) =>
+    Math.max(viewportH - top, PEEK_HEIGHT)
+  );
 
   const curveRadius = useTransform(y, (top) => {
     if (top >= openTop) {
@@ -217,6 +226,7 @@ export function NavLayer({ currentScreen, onSelect }: NavLayerProps) {
     <motion.div
       style={{ y, willChange: "transform", backfaceVisibility: "hidden" }}
       data-theme="minimalist"
+      data-display-phase={displayPhase}
       transformTemplate={(_, generatedTransform) =>
         generatedTransform === "none" ? "translateZ(0)" : `${generatedTransform} translateZ(0)`
       }
@@ -229,24 +239,23 @@ export function NavLayer({ currentScreen, onSelect }: NavLayerProps) {
         suppressToggleRef.current = true;
       }}
       onDragEnd={handleDragEnd}
-      className="absolute inset-0 z-30 isolate touch-none overflow-hidden perf-panel"
+      className="absolute inset-0 z-30 isolate touch-none overflow-hidden transition-colors duration-500 ease-out perf-panel"
     >
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-        <motion.div
-          className="absolute inset-0 border-t border-border bg-background"
-          style={{
-            scaleX: curveScaleX,
-            borderTopLeftRadius: topCornerRadius,
-            borderTopRightRadius: topCornerRadius,
-            willChange: "transform, border-radius",
-            backfaceVisibility: "hidden",
-            transformOrigin: "top center",
-          }}
-          transformTemplate={(_, generatedTransform) =>
-            generatedTransform === "none" ? "translateZ(0)" : `${generatedTransform} translateZ(0)`
-          }
-        />
-      </div>
+      <motion.div
+        className="pointer-events-none absolute left-0 right-0 top-0 z-0 border-t border-border bg-background transition-colors duration-500 ease-out"
+        style={{
+          height: drawerSurfaceHeight,
+          scaleX: curveScaleX,
+          borderTopLeftRadius: topCornerRadius,
+          borderTopRightRadius: topCornerRadius,
+          willChange: "height, transform, border-radius",
+          backfaceVisibility: "hidden",
+          transformOrigin: "top center",
+        }}
+        transformTemplate={(_, generatedTransform) =>
+          generatedTransform === "none" ? "translateZ(0)" : `${generatedTransform} translateZ(0)`
+        }
+      />
 
       <motion.button
         type="button"

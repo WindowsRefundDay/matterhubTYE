@@ -18,6 +18,8 @@ export interface DisplayState {
   nightStartsAt: string;
 }
 
+export type DisplayVisualPhase = "awake" | "mid-dim" | "off";
+
 export interface DisplaySettings {
   autoSleepEnabled: boolean;
   dimAfterSeconds: number;

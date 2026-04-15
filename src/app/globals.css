@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "react-simple-keyboard/build/css/index.css";
 
 :root {
   --background: #09090b;
@@ -38,6 +39,21 @@
   --accent-dim: #333333;
 }
 
+[data-theme="minimalist"][data-display-phase="mid-dim"] {
+  --minimalist-bg: #050505;
+  --minimalist-fg: #FBFBFA;
+  --minimalist-muted: #D8D4CA;
+  --minimalist-border: rgba(255, 255, 255, 0.18);
+  --background: #050505;
+  --foreground: #FBFBFA;
+  --muted: #D8D4CA;
+  --surface: #0D0D0C;
+  --surface-raised: #161514;
+  --border: rgba(255, 255, 255, 0.18);
+  --accent: #FBFBFA;
+  --accent-dim: #D8D4CA;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -58,6 +74,11 @@
   user-select: none;
 }
 
+input,
+textarea {
+  user-select: text;
+}
+
 html, body {
   overflow: hidden;
   touch-action: manipulation;
@@ -71,6 +92,36 @@ body {
 
 .grain-overlay {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+.clock-separator {
+  animation: clock-separator-blink 1s steps(1, end) infinite;
+}
+
+@keyframes clock-separator-blink {
+  0%, 49% {
+    opacity: 1;
+  }
+  50%, 100% {
+    opacity: 0.18;
+  }
+}
+
+.corner-fade-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 118px;
+  width: min(58vw, 380px);
+  background: radial-gradient(
+    ellipse at top left,
+    var(--background) 0%,
+    var(--background) 34%,
+    transparent 68%
+  );
+  opacity: 0.86;
+  pointer-events: none;
 }
 
 .perf-panel {
@@ -96,4 +147,66 @@ body {
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+.matterhub-keyboard .hg-theme-default {
+  background: transparent;
+  border-radius: 0;
+  font-family: var(--font-geist-sans), "SF Pro Display", "Geist Sans", "Helvetica Neue", sans-serif;
+  padding: 0;
+}
+
+.matterhub-keyboard .hg-theme-default .hg-row:not(:last-child) {
+  margin-bottom: 5px;
+}
+
+.matterhub-keyboard .hg-theme-default .hg-row .hg-button-container,
+.matterhub-keyboard .hg-theme-default .hg-row .hg-button:not(:last-child) {
+  margin-right: 5px;
+}
+
+.matterhub-keyboard .hg-theme-default .hg-button {
+  height: 48px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  box-shadow: none;
+  color: var(--foreground);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 8px;
+  transition:
+    background-color 75ms ease,
+    border-color 75ms ease,
+    color 75ms ease,
+    transform 75ms ease;
+}
+
+.matterhub-keyboard .hg-theme-default .hg-button:active,
+.matterhub-keyboard .hg-theme-default .hg-button.hg-activeButton {
+  background: var(--foreground);
+  border-color: var(--foreground);
+  color: var(--background);
+  transform: scale(0.98);
+}
+
+.matterhub-keyboard .hg-theme-default .hg-button.matterhub-keyboard-action {
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.matterhub-keyboard .hg-theme-default .hg-button.matterhub-keyboard-space {
+  flex-grow: 5;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }

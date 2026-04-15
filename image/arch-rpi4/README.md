@@ -1,6 +1,6 @@
-# MatterHub Arch Linux ARM appliance image
+# MatterHub Arch Linux ARM appliance image reference
 
-This directory contains the worker-1 image/ops lane for the Raspberry Pi 4 Arch Linux ARM appliance build.
+This directory contains legacy/reference assets for the Raspberry Pi 4 Arch Linux ARM appliance build. The primary MatterHub production deployment path is Raspberry Pi OS 64-bit Bookworm with `labwc`, documented in `deploy/raspberry-pi/README.md`.
 
 ## Goals
 

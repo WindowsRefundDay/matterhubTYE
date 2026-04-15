@@ -24,7 +24,7 @@ export const NavItem = memo(function NavItem({
     <button
       onClick={() => onSelect(screen)}
       className={cn(
-        "flex min-h-[56px] min-w-[56px] flex-col items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 transition-all duration-200",
+        "flex min-h-[56px] min-w-[56px] flex-col items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 transition-[background-color,color,transform] duration-300 ease-out",
         "active:scale-95",
         isActive
           ? "bg-foreground text-background"

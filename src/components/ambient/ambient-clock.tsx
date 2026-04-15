@@ -7,39 +7,45 @@ export function AmbientClock({ active = true }: { active?: boolean }) {
 
   if (!ready) {
     return (
-      <div className="flex flex-col items-center justify-center animate-pulse">
-        <span className="font-serif text-[140px] leading-none text-muted/20">--:--</span>
+      <div className="flex flex-col items-center justify-center animate-pulse text-[var(--minimalist-fg)] transition-colors duration-500 ease-out">
+        <span className="font-serif text-[136px] leading-none tracking-[-0.04em] text-current opacity-20">
+          --:--
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center gap-6">
-      <div className="flex items-center gap-1">
-        <div className="flex items-baseline gap-2">
-          <span className="font-serif text-[140px] leading-[0.8] tracking-[-0.04em] text-foreground tabular-nums">
+    <div className="flex flex-col items-center justify-center gap-7 text-[var(--minimalist-fg)] transition-colors duration-500 ease-out">
+      <div className="relative flex w-full items-center justify-center">
+        <div className="flex items-baseline justify-center gap-1">
+          <span className="font-serif text-[136px] font-normal leading-[0.78] tracking-[-0.04em] tabular-nums">
             {time?.hours}
           </span>
-          <span className="font-serif text-[140px] leading-[0.8] text-muted/30">
-            :
+          <span
+            aria-hidden="true"
+            className="clock-separator mx-1 flex h-[82px] flex-col items-center justify-center gap-5 self-center"
+          >
+            <span className="block h-2 w-2 rounded-[3px] border border-current bg-current" />
+            <span className="block h-2 w-2 rounded-[3px] border border-current bg-current" />
           </span>
-          <span className="font-serif text-[140px] leading-[0.8] tracking-[-0.04em] text-foreground tabular-nums">
+          <span className="font-serif text-[136px] font-normal leading-[0.78] tracking-[-0.04em] tabular-nums">
             {time?.minutes}
           </span>
         </div>
-        <div className="ml-4 self-center flex flex-col items-start">
-           <span className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-muted bg-muted/5 px-1.5 py-1 rounded-sm border border-border/50">
+        <div className="absolute left-[calc(50%+164px)] top-1/2 flex -translate-y-1/2">
+          <span className="rounded-[4px] border border-current bg-background px-2 py-1 font-mono text-[10px] font-medium uppercase leading-none tracking-[0.12em] text-current opacity-70 transition-colors duration-500 ease-out">
             {time?.period}
           </span>
         </div>
       </div>
-      
-      <div className="flex items-center gap-3">
-        <div className="h-[1px] w-8 bg-border/40" />
-        <p className="font-sans text-[13px] font-bold uppercase tracking-[0.25em] text-muted">
+
+      <div className="flex items-center gap-4">
+        <div className="h-px w-10 bg-current opacity-[0.18]" />
+        <p className="font-mono text-[11px] font-medium uppercase leading-[1.6] tracking-[0.16em] text-current opacity-70">
           {date}
         </p>
-        <div className="h-[1px] w-8 bg-border/40" />
+        <div className="h-px w-10 bg-current opacity-[0.18]" />
       </div>
     </div>
   );

@@ -1,10 +1,4 @@
 #!/bin/sh
 
-chromium-browser \
-  --kiosk \
-  --noerrdialogs \
-  --disable-infobars \
-  --no-first-run \
-  --enable-features=OverlayScrollbar \
-  --start-maximized \
-  http://127.0.0.1:3000
+# Wait for MatterHub server, then launch Chromium kiosk
+/usr/bin/sh -lc 'for i in $(seq 1 60); do systemctl is-active --quiet matterhub && break; sleep 1; done; exec chromium --ozone-platform=wayland --enable-features=UseOzonePlatform,OverlayScrollbar --kiosk --noerrdialogs --disable-infobars --no-first-run --start-maximized http://127.0.0.1:3000' &

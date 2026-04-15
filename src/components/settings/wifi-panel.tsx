@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
+import { VirtualKeyboard } from "@/components/ui/virtual-keyboard";
 import { useWifiStatus } from "@/hooks/use-wifi-status";
 import { cn } from "@/lib/utils";
 import { useTap } from "@/hooks/use-tap";
@@ -89,7 +90,11 @@ export function WifiPanel({ onBack }: { onBack: () => void }) {
   const wifiEnabled = data?.wifiEnabled ?? false;
   const connected = data?.wlanState === "connected";
   const details = data?.connectionDetails;
-  const otherNetworks = data?.networks.filter((n) => !n.inUse) ?? [];
+  const activeSsid = details?.ssid ?? data?.wlanConnection ?? null;
+  const otherNetworks =
+    data?.networks.filter((n) => !n.inUse && n.ssid !== activeSsid) ?? [];
+  const connectRequiresPassword =
+    Boolean(connectSecurity) && connectSecurity !== "--" && connectSecurity !== "none";
 
   const toggleTap = useTap(toggleWifi);
 
@@ -302,56 +307,72 @@ export function WifiPanel({ onBack }: { onBack: () => void }) {
 
       {/* ───── Password / connect modal ───── */}
       {connectSsid && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm px-6">
-          <div className="w-full max-w-sm rounded-lg border border-border bg-background p-6 shadow-2xl">
-            <div className="mb-1 flex items-center gap-3">
-              <h3 className="font-serif text-[20px] text-foreground">{connectSsid}</h3>
-            </div>
-            <p className="mb-6 text-[12px] uppercase tracking-widest text-muted">
-              {securityLabel(connectSecurity)} Authentication
-            </p>
-
-            {connectSecurity && connectSecurity !== "--" && connectSecurity !== "none" && (
-              <div className="mb-6">
-                <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted mb-2">Network Password</label>
-                <input
-                  type="password"
-                  placeholder="Required"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoFocus
-                  className="w-full rounded-md border border-border bg-muted/5 px-4 py-3 text-[14px] text-foreground placeholder:text-muted/30 focus:outline-none focus:border-foreground transition-colors"
-                />
+        <div className="absolute inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-sm">
+          <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-4">
+            <div className="w-full max-w-sm rounded-lg border border-border bg-background p-6">
+              <div className="mb-1 flex items-center gap-3">
+                <h3 className="min-w-0 truncate font-serif text-[20px] text-foreground">{connectSsid}</h3>
               </div>
-            )}
-
-            {connectError && (
-              <p className="mb-6 rounded-md bg-[var(--minimalist-pastel-red)] px-4 py-3 text-[12px] text-[var(--minimalist-pastel-red-fg)] border border-border/10">
-                {connectError}
+              <p className="mb-5 text-[12px] uppercase tracking-widest text-muted">
+                {securityLabel(connectSecurity)} Authentication
               </p>
-            )}
 
-            <div className="flex gap-4">
-              <button
-                onClick={() => { setConnectSsid(null); setPassword(""); setConnectError(null); }}
-                className="flex-1 border border-border py-3 rounded-md text-[11px] font-bold uppercase tracking-widest text-muted transition-colors active:bg-muted/5"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={connectToNetwork}
-                disabled={connecting}
-                className={cn(
-                  "flex-1 py-3 rounded-md text-[11px] font-bold uppercase tracking-widest transition-all",
-                  connecting
-                    ? "bg-muted text-background opacity-50"
-                    : "bg-foreground text-background active:scale-95"
-                )}
-              >
-                {connecting ? "Auth..." : "Connect"}
-              </button>
+              {connectRequiresPassword && (
+                <div className="mb-5">
+                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted">
+                    Network Password
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Tap keys below"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoFocus
+                    autoComplete="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    className="w-full rounded-md border border-border bg-muted/5 px-4 py-3 text-[16px] text-foreground placeholder:text-muted/30 transition-colors focus:border-foreground focus:outline-none"
+                  />
+                </div>
+              )}
+
+              {connectError && (
+                <p className="mb-5 rounded-md border border-border/10 bg-[var(--minimalist-pastel-red)] px-4 py-3 text-[12px] text-[var(--minimalist-pastel-red-fg)]">
+                  {connectError}
+                </p>
+              )}
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => { setConnectSsid(null); setPassword(""); setConnectError(null); }}
+                  className="flex-1 rounded-md border border-border py-3 text-[11px] font-bold uppercase tracking-widest text-muted transition-colors active:bg-muted/5"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={connectToNetwork}
+                  disabled={connecting}
+                  className={cn(
+                    "flex-1 rounded-md py-3 text-[11px] font-bold uppercase tracking-widest transition-all",
+                    connecting
+                      ? "bg-muted text-background opacity-50"
+                      : "bg-foreground text-background active:scale-95"
+                  )}
+                >
+                  {connecting ? "Auth..." : "Connect"}
+                </button>
+              </div>
             </div>
           </div>
+
+          {connectRequiresPassword && (
+            <VirtualKeyboard
+              value={password}
+              onChange={setPassword}
+              onDone={connectToNetwork}
+              className="shrink-0 pb-[68px]"
+            />
+          )}
         </div>
       )}
     </div>
@@ -360,9 +381,9 @@ export function WifiPanel({ onBack }: { onBack: () => void }) {
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between py-4">
-      <span className="text-[13px] text-muted">{label}</span>
-      <span className="text-[13px] font-mono font-medium text-foreground bg-muted/5 px-2 py-0.5 rounded-sm">{value}</span>
+    <div className="flex items-center justify-between gap-4 py-4">
+      <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted">{label}</p>
+      <p className="min-w-0 truncate text-right font-mono text-[12px] text-foreground">{value}</p>
     </div>
   );
 }

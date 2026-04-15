@@ -141,15 +141,24 @@ export class WifiClient {
     let linkSpeed = "";
     let macAddress = "";
     try {
-      const activeOut = this.run(
-        `nmcli -t -f SIGNAL,FREQ,RATE,BSSID dev wifi list ifname ${this.config.interface} --rescan no`,
-      );
+      let activeOut = "";
+      try {
+        activeOut = this.run(
+          `nmcli --escape no -t -f SIGNAL,FREQ,RATE,BSSID dev wifi list ifname ${this.config.interface} --rescan no`,
+        );
+      } catch {
+        activeOut = this.run(
+          `nmcli -t -f SIGNAL,FREQ,RATE,BSSID dev wifi list ifname ${this.config.interface} --rescan no`,
+        );
+      }
       const firstLine = activeOut.split("\n")[0] ?? "";
+      // BSSID contains colons (e.g. 5C:35:FC:6B:46:49), so split only
+      // the first three fields and rejoin the remainder as the MAC address.
       const parts = firstLine.split(":");
       signal = parseInt(parts[0] ?? "0", 10);
       frequency = parts[1] ?? "";
       linkSpeed = parts[2] ?? "";
-      macAddress = parts[3] ?? "";
+      macAddress = parts.slice(3).join(":");
     } catch {
       // non-critical
     }
@@ -175,13 +184,20 @@ export class WifiClient {
       .split("\n")
       .filter(Boolean)
       .map((line) => {
-        const parts = line.split(":");
-        return {
-          inUse: parts[0]?.trim() === "*",
-          ssid: parts[1]?.trim() ?? "",
-          signal: parseInt(parts[2] ?? "0", 10),
-          security: parts[3]?.trim() ?? "",
-        };
+        // nmcli terse format uses ":" as separator. Split carefully:
+        // IN-USE:SSID:SIGNAL:SECURITY — SSID may contain colons or
+        // trailing spaces that must be preserved for exact matching.
+        const inUseEnd = line.indexOf(":");
+        const inUse = line.slice(0, inUseEnd).trim() === "*";
+
+        // Walk backwards: SECURITY and SIGNAL are the last two fields
+        const lastColon = line.lastIndexOf(":");
+        const secondLastColon = line.lastIndexOf(":", lastColon - 1);
+        const security = line.slice(lastColon + 1);
+        const signal = parseInt(line.slice(secondLastColon + 1, lastColon), 10);
+        const ssid = line.slice(inUseEnd + 1, secondLastColon);
+
+        return { inUse, ssid, signal, security };
       })
       .filter((n) => n.ssid)
       .reduce<WifiNetwork[]>((acc, n) => {
