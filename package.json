@@ -13,6 +13,7 @@
     "test": "node tests/run-tests.mjs"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "geist": "^1.7.0",

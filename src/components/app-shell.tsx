@@ -20,6 +20,7 @@ import { BottomSheet } from "./ui/bottom-sheet";
 import { RoomDetail } from "./rooms/room-detail";
 import { DeviceControl } from "./devices/device-control";
 import { Icon } from "./ui/icon";
+import { useVoiceAssistant } from "@/hooks/use-voice-assistant";
 import type { Screen } from "@/types";
 import type { DisplayState, DisplayVisualPhase } from "@/types/system";
 
@@ -84,8 +85,8 @@ function isWithinDayWindow(dayStartsAt: string, nightStartsAt: string, now = new
 
 export function AppShell() {
   const appState = useSmartHomeAppState();
-  const { weather, rooms } = useSmartHomeStaticData();
-  const { getDevice } = useSmartHomeDevices();
+  const { weather, rooms, scenes } = useSmartHomeStaticData();
+  const { devices, getDevice } = useSmartHomeDevices();
   const {
     setMode,
     setScreen,
@@ -290,6 +291,29 @@ export function AppShell() {
     [rooms, selectedRoomId]
   );
 
+  const voiceContext = useMemo(
+    () => {
+      const roomMap = new Map(rooms.map((room) => [room.id, room.name]));
+      return {
+        devices: devices.map((device) => ({
+          entityId: device.id,
+          name: device.name,
+          type: device.type,
+          roomName: roomMap.get(device.roomId) ?? device.roomId,
+          isOn: device.isOn,
+          ...(typeof device.value === "number" ? { value: device.value } : {}),
+          ...(typeof device.temperature === "number" ? { temperature: device.temperature } : {}),
+          ...(typeof device.targetTemperature === "number" ? { targetTemperature: device.targetTemperature } : {}),
+          ...(typeof device.isLocked === "boolean" ? { isLocked: device.isLocked } : {}),
+        })),
+        rooms: rooms.map((room) => ({ id: room.id, name: room.name })),
+        scenes: scenes.map((scene) => ({ entityId: scene.id, name: scene.name })),
+      };
+    },
+    [devices, rooms, scenes]
+  );
+  const voiceAssistant = useVoiceAssistant({ context: voiceContext });
+
   return (
     <DeviceFrame>
       <div
@@ -305,17 +329,25 @@ export function AppShell() {
         <div className="absolute inset-0 pointer-events-none opacity-[0.03] grain-overlay" />
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_120%,var(--minimalist-pastel-blue)_0%,transparent_50%)] opacity-[0.15]" />
         
-        <AmbientClock active={ambientVisible} />
-        <div className="flex flex-col items-center gap-4 mt-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-          <WeatherDisplay weather={weather} />
-          <StatusLine />
-        </div>
+        <AmbientClock active={ambientVisible} dimMode={isMidDim} />
+        {!isMidDim && (
+          <div className="flex flex-col items-center gap-4 mt-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+            <WeatherDisplay weather={weather} />
+            <StatusLine />
+          </div>
+        )}
       </div>
 
       <NavLayer
         currentScreen={screen}
         displayPhase={displayVisualPhase}
         onSelect={handleNavSelect}
+        voiceState={voiceAssistant.voiceState}
+        isVoiceSessionOpen={voiceAssistant.isSessionOpen}
+        turns={voiceAssistant.turns}
+        currentImage={voiceAssistant.currentImage}
+        onAssistantActivate={voiceAssistant.startSession}
+        onAssistantDismiss={voiceAssistant.dismissSession}
       />
 
       <div
@@ -375,6 +407,7 @@ export function AppShell() {
           className="absolute inset-0 z-50 bg-black"
         />
       )}
+
     </DeviceFrame>
   );
 }

@@ -11,14 +11,22 @@ import {
 } from "framer-motion";
 import type { ValueAnimationTransition } from "motion-dom";
 import { AssistantHandle } from "@/components/assistant/assistant-handle";
+import { DrawerVoicePanel } from "./drawer-voice-panel";
 import { NavItem } from "./nav-item";
 import type { DisplayVisualPhase } from "@/types/system";
 import type { Screen } from "@/types";
+import type { ConversationTurn, VoiceState } from "@/hooks/use-voice-assistant";
 
 interface NavLayerProps {
   currentScreen: Screen;
   displayPhase?: DisplayVisualPhase;
   onSelect: (screen: Screen) => void;
+  voiceState: VoiceState;
+  isVoiceSessionOpen: boolean;
+  turns: ConversationTurn[];
+  currentImage: { url: string; caption?: string } | null;
+  onAssistantActivate: () => void;
+  onAssistantDismiss: () => void;
 }
 
 const navItems: { screen: Screen; icon: string; label: string }[] = [
@@ -43,6 +51,12 @@ export function NavLayer({
   currentScreen,
   displayPhase = "awake",
   onSelect,
+  voiceState,
+  isVoiceSessionOpen,
+  turns,
+  currentImage,
+  onAssistantActivate,
+  onAssistantDismiss,
 }: NavLayerProps) {
   const initialClosedTop = Math.max(INITIAL_VIEWPORT_HEIGHT - PEEK_HEIGHT, FULL_TOP);
 
@@ -170,10 +184,34 @@ export function NavLayer({
     [animateTo, getSnapTop, viewportH]
   );
 
+  useEffect(() => {
+    if (isVoiceSessionOpen) return;
+    if (snapPointRef.current !== "full") return;
+    animateTo(closedTop, SPRING_TRANSITION);
+    snapPointRef.current = "closed";
+  }, [animateTo, closedTop, isVoiceSessionOpen]);
+
   const handleDragEnd = useCallback(
     (_: unknown, info: PanInfo) => {
       const currentTop = y.get();
       const vy = info.velocity.y;
+
+      if (isVoiceSessionOpen) {
+        const dismissThreshold = openTop * 0.35;
+        const shouldDismiss = vy >= 900 || currentTop > dismissThreshold;
+
+        if (shouldDismiss) {
+          onAssistantDismiss();
+          snapTo("closed");
+        } else {
+          snapTo("full");
+        }
+
+        requestAnimationFrame(() => {
+          suppressToggleRef.current = false;
+        });
+        return;
+      }
 
       if (vy <= -1200) {
         snapTo(currentTop <= openTop * 0.8 ? "full" : "open");
@@ -196,23 +234,21 @@ export function NavLayer({
         suppressToggleRef.current = false;
       });
     },
-    [closedTop, openTop, snapTo, y]
+    [closedTop, isVoiceSessionOpen, onAssistantDismiss, openTop, snapTo, y]
   );
-
-  const toggleDrawer = useCallback(() => {
-    if (snapPoint === "full") {
-      snapTo("open");
-    } else if (snapPoint === "open") {
-      snapTo("closed");
-    } else {
-      snapTo("open");
-    }
-  }, [snapPoint, snapTo]);
 
   const handleHandlePress = useCallback(() => {
     if (suppressToggleRef.current) return;
-    toggleDrawer();
-  }, [toggleDrawer]);
+
+    if (isVoiceSessionOpen) {
+      onAssistantDismiss();
+      snapTo("closed");
+      return;
+    }
+
+    snapTo("full");
+    onAssistantActivate();
+  }, [isVoiceSessionOpen, onAssistantDismiss, onAssistantActivate, snapTo]);
 
   const handleNavSelect = useCallback(
     (screen: Screen) => {
@@ -221,6 +257,8 @@ export function NavLayer({
     },
     [onSelect, snapTo]
   );
+
+  const shouldShowNavItems = !isVoiceSessionOpen;
 
   return (
     <motion.div
@@ -257,32 +295,51 @@ export function NavLayer({
         }
       />
 
-      <motion.button
-        type="button"
+      <motion.div
         className="relative z-10 flex w-full items-center justify-center cursor-grab active:cursor-grabbing"
         style={{ height: PEEK_HEIGHT }}
         onPointerDown={(event) => dragControls.start(event)}
-        onClick={handleHandlePress}
       >
-        <AssistantHandle state="drawer" />
-      </motion.button>
-
-      <motion.div
-        style={{ opacity: contentOpacity }}
-        className="relative z-10 grid grid-cols-5 items-start px-2"
-      >
-        {navItems.map((item) => (
-          <div key={item.screen} className="flex justify-center">
-            <NavItem
-              screen={item.screen}
-              icon={item.icon}
-              label={item.label}
-              isActive={currentScreen === item.screen}
-              onSelect={handleNavSelect}
-            />
-          </div>
-        ))}
+        <button
+          type="button"
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          onClick={handleHandlePress}
+          className="relative z-20 flex items-center justify-center rounded-md"
+          aria-label={isVoiceSessionOpen ? "Stop voice session" : "Start voice session"}
+        >
+          <AssistantHandle state={isVoiceSessionOpen ? voiceState : "drawer"} />
+        </button>
       </motion.div>
+
+      {isVoiceSessionOpen && (
+        <DrawerVoicePanel
+          turns={turns}
+          voiceState={voiceState}
+          currentImage={currentImage}
+        />
+      )}
+
+      {shouldShowNavItems && (
+        <motion.div
+          style={{ opacity: contentOpacity }}
+          className="relative z-10 grid grid-cols-5 items-start px-2 pt-1"
+        >
+          {navItems.map((item) => (
+            <div key={item.screen} className="flex justify-center">
+              <NavItem
+                screen={item.screen}
+                icon={item.icon}
+                label={item.label}
+                isActive={currentScreen === item.screen}
+                onSelect={handleNavSelect}
+              />
+            </div>
+          ))}
+        </motion.div>
+      )}
     </motion.div>
   );
 }

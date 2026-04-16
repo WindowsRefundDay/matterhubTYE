@@ -43,13 +43,13 @@ test("RoomList preserves active-count summaries for every room", async () => {
   );
 
   assert.match(html, /Living Room/);
-  assert.match(html, /3\/4 active/);
+  assert.match(html, /3 active/);
   assert.match(html, /Kitchen/);
-  assert.match(html, /2\/2 active/);
+  assert.match(html, /2 active/);
   assert.match(html, /Bedroom/);
-  assert.match(html, /2\/3 active/);
+  assert.match(html, /2 active/);
   assert.match(html, /Bathroom/);
-  assert.match(html, /0\/1 active/);
+  assert.match(html, /All off/);
 });
 
 test("SettingsPanel preserves the appliance status summary block", async () => {
@@ -58,11 +58,11 @@ test("SettingsPanel preserves the appliance status summary block", async () => {
     "SettingsPanel"
   );
 
-  assert.match(html, /Awaiting appliance provisioning/);
+  assert.match(html, /Provisioning/);
   assert.match(html, /Home Assistant pairing is not configured yet/);
-  assert.match(html, /Setup preview/);
-  assert.match(html, /Test audio/);
-  assert.match(html, /Audio output/);
+  assert.match(html, /Setup Required/);
+  assert.match(html, /Output Test/);
+  assert.match(html, /Routing/);
   assert.match(html, /800 x 480/);
   assert.doesNotMatch(html, />Connected</);
 });

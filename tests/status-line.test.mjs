@@ -12,7 +12,9 @@ test("StatusLine preserves the combined active-device, light, and lock summary",
     "StatusLine"
   );
 
-  assert.match(html, /10 devices active · 3 lights on · Door locked/);
+  assert.match(html, /10 Devices Active/);
+  assert.match(html, /3 Lights On/);
+  assert.match(html, /Secured/);
 });
 
 test("WeatherDisplay preserves the mock weather snapshot formatting", async () => {
@@ -24,5 +26,6 @@ test("WeatherDisplay preserves the mock weather snapshot formatting", async () =
   );
 
   assert.match(html, /68°/);
-  assert.match(html, /H:74° L:58°/);
+  assert.match(html, /High 74°/);
+  assert.match(html, /Low 58°/);
 });

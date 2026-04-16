@@ -10,8 +10,9 @@ test("SettingsPanel surfaces truthful setup and demo state messaging", async () 
     "SettingsPanel"
   );
 
-  assert.match(html, /Awaiting appliance provisioning/);
-  assert.match(html, /Demo fixtures still active/);
+  assert.match(html, /Provisioning/);
+  assert.match(html, /Demo Mode/);
+  assert.match(html, /Currently showing mock device data/);
   assert.match(html, /Home Assistant pairing is not configured yet/);
   assert.doesNotMatch(html, />Connected</);
 });

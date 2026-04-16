@@ -50,8 +50,8 @@ test("DeviceControl preserves control routing for each device group", async () =
 
   assert.match(lightHtml, /Brightness/);
   assert.match(plugHtml, /Brightness/);
-  assert.match(thermostatHtml, /Current: 72°F/);
-  assert.match(fanHtml, /Speed/);
+  assert.match(thermostatHtml, /Ambient 72°F/);
+  assert.match(fanHtml, /Flow Intensity/);
   assert.match(lockHtml, /Unlock/);
-  assert.match(cameraHtml, /Recording/);
+  assert.match(cameraHtml, /Live Monitoring/);
 });
