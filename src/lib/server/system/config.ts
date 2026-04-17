@@ -75,7 +75,7 @@ export async function loadSystemConfig(
     path.join(process.cwd(), ".tmp", "display-settings.json");
 
   const wifiInterface = env.MATTERHUB_WIFI_INTERFACE ?? "wlan0";
-  const wifiCommandPrefix = env.MATTERHUB_WIFI_COMMAND_PREFIX ?? "sudo";
+  const wifiCommandPrefix = env.MATTERHUB_WIFI_COMMAND_PREFIX ?? "sudo -n";
   const wifiCommandTimeout = Number(env.MATTERHUB_WIFI_COMMAND_TIMEOUT) || 15000;
 
   // Auto-detect hardware availability

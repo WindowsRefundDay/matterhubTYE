@@ -8,12 +8,14 @@ interface DrawerVoicePanelProps {
   turns: ConversationTurn[];
   voiceState: VoiceState;
   currentImage: { url: string; caption?: string } | null;
+  micError: string | null;
 }
 
 export function DrawerVoicePanel({
   turns,
   voiceState,
   currentImage,
+  micError,
 }: DrawerVoicePanelProps) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -71,6 +73,17 @@ export function DrawerVoicePanel({
           <p className="font-serif text-[22px] leading-[1.25] tracking-[-0.02em] text-foreground">
             {emptyCopy}
           </p>
+        )}
+
+        {micError && (
+          <div className="rounded-md border border-[var(--minimalist-pastel-red-fg)]/20 bg-[var(--minimalist-pastel-red)] px-4 py-3">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--minimalist-pastel-red-fg)]">
+              Temp Mic Diagnostics
+            </p>
+            <p className="mt-2 text-[13px] leading-relaxed text-[var(--minimalist-pastel-red-fg)]">
+              {micError}
+            </p>
+          </div>
         )}
 
         {turns.map((turn, index) => {

@@ -346,6 +346,7 @@ export function AppShell() {
         isVoiceSessionOpen={voiceAssistant.isSessionOpen}
         turns={voiceAssistant.turns}
         currentImage={voiceAssistant.currentImage}
+        micError={voiceAssistant.micError}
         onAssistantActivate={voiceAssistant.startSession}
         onAssistantDismiss={voiceAssistant.dismissSession}
       />

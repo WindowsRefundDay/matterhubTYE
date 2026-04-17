@@ -84,17 +84,17 @@ test("WifiClient parses status using injected command dependencies", async () =>
     {
       mode: "hardware",
       interface: "wlan0",
-      commandPrefix: "sudo",
+      commandPrefix: "sudo -n",
       commandTimeout: 15000,
     },
     {
       runCommand(command) {
         switch (command) {
-          case "sudo nmcli radio wifi":
+          case "sudo -n nmcli radio wifi":
             return "enabled";
-          case "sudo nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device status":
+          case "sudo -n nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device status":
             return "wlan0:wifi:connected:MyWifi\neth0:ethernet:connected:Wired";
-          case 'sudo nmcli -t -f 802-11-wireless.ssid,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS,802-11-wireless-security.key-mgmt connection show "MyWifi"':
+          case 'sudo -n nmcli -t -f 802-11-wireless.ssid,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS,802-11-wireless-security.key-mgmt connection show "MyWifi"':
             return [
               "802-11-wireless.ssid:MyWifi",
               "IP4.ADDRESS[1]:192.168.1.10/24",
@@ -102,9 +102,9 @@ test("WifiClient parses status using injected command dependencies", async () =>
               "IP4.DNS[1]:1.1.1.1",
               "802-11-wireless-security.key-mgmt:wpa-psk",
             ].join("\n");
-          case "sudo nmcli -t -f SIGNAL,FREQ,RATE,BSSID dev wifi list ifname wlan0 --rescan no":
+          case "sudo -n nmcli -t -f SIGNAL,FREQ,RATE,BSSID dev wifi list ifname wlan0 --rescan no":
             return "78:2412 MHz:195 Mbit/s:AA-BB-CC";
-          case "sudo nmcli --escape no -t -f IN-USE,SSID,SIGNAL,SECURITY dev wifi list ifname wlan0":
+          case "sudo -n nmcli --escape no -t -f IN-USE,SSID,SIGNAL,SECURITY dev wifi list ifname wlan0 --rescan no":
             return "*:MyWifi:78:WPA2\n:Guest:40:none";
           default:
             throw new Error(`Unexpected command: ${command}`);
@@ -125,6 +125,45 @@ test("WifiClient parses status using injected command dependencies", async () =>
     status.networks.map((network) => network.ssid),
     ["MyWifi", "Guest"],
   );
+});
+
+test("WifiClient performs an active scan only while disconnected", async () => {
+  const { WifiClient } = await importCompiled("lib/server/system/wifi/client");
+
+  const commands = [];
+  const client = new WifiClient(
+    {
+      mode: "hardware",
+      interface: "wlan0",
+      commandPrefix: "sudo -n",
+      commandTimeout: 15000,
+    },
+    {
+      runCommand(command) {
+        commands.push(command);
+        switch (command) {
+          case "sudo -n nmcli radio wifi":
+            return "enabled";
+          case "sudo -n nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device status":
+            return "wlan0:wifi:disconnected:\neth0:ethernet:disconnected:";
+          case "sudo -n nmcli --escape no -t -f IN-USE,SSID,SIGNAL,SECURITY dev wifi list ifname wlan0":
+            return ":Guest:40:none";
+          default:
+            throw new Error(`Unexpected command: ${command}`);
+        }
+      },
+    },
+  );
+
+  const status = await client.getStatus();
+
+  assert.equal(status.wlanState, "disconnected");
+  assert.deepEqual(commands, [
+    "sudo -n nmcli radio wifi",
+    "sudo -n nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device status",
+    "sudo -n nmcli --escape no -t -f IN-USE,SSID,SIGNAL,SECURITY dev wifi list ifname wlan0",
+  ]);
+  assert.deepEqual(status.networks.map((network) => network.ssid), ["Guest"]);
 });
 
 test("WifiClient builds escaped connection commands with injected dependencies", async () => {

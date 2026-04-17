@@ -42,7 +42,7 @@ export function SettingsPanel() {
   const {
     data: wifiSummary,
     refresh: refreshWifiSummary,
-  } = useWifiStatus({ pollMs: 8000 });
+  } = useWifiStatus({ pollMs: wifiView ? null : 8000 });
   const {
     data: displaySummary,
     refresh: refreshDisplaySummary,

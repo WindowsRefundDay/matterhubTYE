@@ -53,7 +53,7 @@ export class WifiClient {
     let networks: WifiNetwork[] = [];
     if (wifiEnabled) {
       try {
-        networks = this.scanNetworks();
+        networks = this.scanNetworks({ rescan: wlanState !== "connected" });
       } catch {
         // scan may fail if interface is unmanaged
       }
@@ -176,9 +176,10 @@ export class WifiClient {
     };
   }
 
-  private scanNetworks(): WifiNetwork[] {
+  private scanNetworks({ rescan = true }: { rescan?: boolean } = {}): WifiNetwork[] {
+    const rescanFlag = rescan ? "" : " --rescan no";
     const scanOut = this.run(
-      `nmcli --escape no -t -f IN-USE,SSID,SIGNAL,SECURITY dev wifi list ifname ${this.config.interface}`,
+      `nmcli --escape no -t -f IN-USE,SSID,SIGNAL,SECURITY dev wifi list ifname ${this.config.interface}${rescanFlag}`,
     );
     return scanOut
       .split("\n")

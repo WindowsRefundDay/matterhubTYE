@@ -20,6 +20,7 @@ export interface UseVoiceAssistantReturn {
   turns: ConversationTurn[];
   currentResponse: string;
   currentImage: { url: string; caption?: string } | null;
+  micError: string | null;
   startSession: () => void;
   dismissSession: () => void;
 }
@@ -34,6 +35,7 @@ const SILENCE_TRIGGER_MS = 1500;
 const SILENCE_POLL_MS = 100;
 const SESSION_INACTIVITY_MS = 10000;
 const THINKING_FADE_MS = 220;
+const ENABLE_TEMP_MIC_LOGGING = true;
 
 const VOICE_SFX = {
   on: "/audio/voice/va-on.wav",
@@ -46,6 +48,50 @@ const VOICE_SFX_VOLUME = {
   off: 0.5,
   thinking: 0.22,
 } as const;
+
+async function buildMicErrorMessage(error: unknown): Promise<string> {
+  const base =
+    error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : `Unknown mic error: ${String(error)}`;
+
+  const diagnostics: string[] = [];
+
+  diagnostics.push(`secure=${window.isSecureContext ? "yes" : "no"}`);
+  diagnostics.push(
+    `mediaDevices=${typeof navigator.mediaDevices?.getUserMedia === "function" ? "yes" : "no"}`
+  );
+
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const inputs = devices.filter((device) => device.kind === "audioinput");
+    diagnostics.push(`audioInputs=${inputs.length}`);
+    if (inputs[0]?.label) {
+      diagnostics.push(`firstInput=${inputs[0].label}`);
+    }
+  } catch {
+    diagnostics.push("audioInputs=unknown");
+  }
+
+  return `${base} [${diagnostics.join(" | ")}]`;
+}
+
+async function postTempMicLog(
+  event: string,
+  details?: Record<string, unknown>
+): Promise<void> {
+  if (!ENABLE_TEMP_MIC_LOGGING) return;
+
+  try {
+    await fetch("/api/system/audio-test-log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event, details }),
+    });
+  } catch {
+    // best effort
+  }
+}
 
 function isCoherentSpeech(text?: string): boolean {
   if (!text) return false;
@@ -65,6 +111,7 @@ export function useVoiceAssistant({
   const [turns, setTurns] = useState<ConversationTurn[]>([]);
   const [currentResponse, setCurrentResponse] = useState("");
   const [currentImage, setCurrentImage] = useState<{ url: string; caption?: string } | null>(null);
+  const [micError, setMicError] = useState<string | null>(null);
 
   const stateRef = useRef<VoiceState>("idle");
   const sessionOpenRef = useRef(false);
@@ -224,6 +271,7 @@ export function useVoiceAssistant({
       chunksRef.current = [];
       setCurrentImage(null);
       setCurrentResponse("");
+      setMicError(null);
       stopThinkingLoopSfx();
 
       if (returnHome) {
@@ -424,8 +472,47 @@ export function useVoiceAssistant({
       if (!sessionOpenRef.current || stateRef.current !== "idle") return;
 
       try {
+        await postTempMicLog("voice_mic_request_started", {
+          requireSpeechStart,
+          secureContext: window.isSecureContext,
+          hasGetUserMedia:
+            typeof navigator.mediaDevices?.getUserMedia === "function",
+        });
+
+        try {
+          await postTempMicLog("voice_mic_devices_started");
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const inputs = devices
+            .filter((device) => device.kind === "audioinput")
+            .map((device) => ({
+              deviceId: device.deviceId,
+              label: device.label || "(blank)",
+              groupId: device.groupId || "(blank)",
+            }));
+          await postTempMicLog("voice_mic_devices", {
+            audioInputs: inputs,
+          });
+        } catch (error) {
+          await postTempMicLog("voice_mic_devices_failed", {
+            error: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+          });
+        }
+
+        await postTempMicLog("voice_mic_gum_started");
+        const gumTimeout = window.setTimeout(() => {
+          void postTempMicLog("voice_mic_gum_timeout", {
+            afterMs: 8000,
+          });
+        }, 8000);
+
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        window.clearTimeout(gumTimeout);
         streamRef.current = stream;
+        setMicError(null);
+        await postTempMicLog("voice_mic_stream_opened", {
+          trackLabels: stream.getAudioTracks().map((track) => track.label || "(blank)"),
+          trackCount: stream.getAudioTracks().length,
+        });
 
         const audioCtx = new AudioContext();
         audioContextRef.current = audioCtx;
@@ -444,6 +531,9 @@ export function useVoiceAssistant({
         const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
         mediaRecorderRef.current = recorder;
         chunksRef.current = [];
+        await postTempMicLog("voice_mic_recorder_ready", {
+          mimeType: recorder.mimeType || "(default)",
+        });
 
         recorder.ondataavailable = (event) => {
           if (event.data.size > 0) chunksRef.current.push(event.data);
@@ -528,7 +618,12 @@ export function useVoiceAssistant({
         recorder.start(100);
         transition("listening");
         armSilenceDetection(requireSpeechStart);
-      } catch {
+      } catch (error) {
+        const message = await buildMicErrorMessage(error);
+        setMicError(message);
+        await postTempMicLog("voice_mic_failed", {
+          message,
+        });
         transition("idle");
         armSessionTimer();
       }
@@ -544,6 +639,7 @@ export function useVoiceAssistant({
     setCurrentImage(null);
     setCurrentResponse("");
     setTurns([]);
+    setMicError(null);
     transition("idle");
     playOneShotSfx(VOICE_SFX.on, VOICE_SFX_VOLUME.on);
     armSessionTimer();
@@ -563,6 +659,7 @@ export function useVoiceAssistant({
     turns,
     currentResponse,
     currentImage,
+    micError,
     startSession,
     dismissSession,
   };

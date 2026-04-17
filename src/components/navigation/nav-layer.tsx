@@ -25,6 +25,7 @@ interface NavLayerProps {
   isVoiceSessionOpen: boolean;
   turns: ConversationTurn[];
   currentImage: { url: string; caption?: string } | null;
+  micError: string | null;
   onAssistantActivate: () => void;
   onAssistantDismiss: () => void;
 }
@@ -55,6 +56,7 @@ export function NavLayer({
   isVoiceSessionOpen,
   turns,
   currentImage,
+  micError,
   onAssistantActivate,
   onAssistantDismiss,
 }: NavLayerProps) {
@@ -319,6 +321,7 @@ export function NavLayer({
           turns={turns}
           voiceState={voiceState}
           currentImage={currentImage}
+          micError={micError}
         />
       )}
 
