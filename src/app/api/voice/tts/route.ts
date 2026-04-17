@@ -8,6 +8,14 @@ const DEFAULT_PIPER_BINARY = "/home/pi/.venv/bin/piper";
 const DEFAULT_PIPER_MODEL =
   "/home/pi/piper-models/en_US-amy-medium.onnx";
 
+type TtsRequestBody = {
+  text?: string;
+};
+
+/**
+ * Synthesis-only endpoint. Live capture stays in the browser and speech-to-text
+ * stays on /api/voice/chat until a dedicated streaming design is approved.
+ */
 /** WAV header for raw PCM: 22050 Hz, mono, 16-bit signed little-endian */
 function buildWavHeader(pcmByteLength: number): Buffer {
   const sampleRate = 22050;
@@ -41,7 +49,7 @@ function buildWavHeader(pcmByteLength: number): Buffer {
 
 export async function POST(request: NextRequest) {
   try {
-    const { text } = (await request.json()) as { text: string };
+    const { text } = (await request.json()) as TtsRequestBody;
 
     if (!text?.trim()) {
       return NextResponse.json({ status: "error", error: "Missing text." }, { status: 400 });
