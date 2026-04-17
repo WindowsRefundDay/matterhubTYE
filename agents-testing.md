@@ -1,11 +1,19 @@
 # MatterHub agent testing notes
 
-## Audio test flow
+## Audio transition note
 
-The **Settings → Audio → Test audio** flow now does two things:
+The browser-owned player/sink-selection flow in this repo is now a legacy diagnostic path, not the Phase 1 production audio owner.
+
+- On Raspberry Pi hardware, the preferred audio proof path is the OS-level `/api/system/audio` status/test workflow.
+- On non-Pi development machines, audio diagnostics should return `supported: false` with `mode: "unsupported"` instead of claiming a healthy local appliance path.
+- Chromium kiosk startup should stay free of `--alsa-input-device` / `--alsa-output-device` flags for the primary audio route.
+
+## Legacy browser audio test flow
+
+The **Settings → Audio → Test audio** flow currently does two things:
 
 1. opens the full-screen Apple Music-like player and starts the local Don Toliver reference track
-2. writes structured log entries so we can inspect Raspberry Pi audio behavior later
+2. writes structured log entries so we can inspect Raspberry Pi browser audio behavior later
 
 ## Log file
 
@@ -69,7 +77,7 @@ For successful non-default routing, browser support must allow:
 - output-device permission
 - `setSinkId()` support
 
-This means the UI is ready now, and the logs should tell us exactly what the Pi browser/runtime supports once hardware is available.
+This browser path is now best treated as a fallback/legacy diagnostic. The Phase 1 deploy path should prove OS-owned audio first and keep Chromium out of primary ALSA routing.
 
 ## Verification commands
 
