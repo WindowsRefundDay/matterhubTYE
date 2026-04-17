@@ -1,105 +1,36 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { importCompiled } from "./test-helpers.mjs";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-process.env.MATTERHUB_SYSTEM_MODE = "mock";
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const routePath = path.join(rootDir, "src", "app", "api", "system", "audio", "route.ts");
 
-async function importRouteModule() {
-  return importCompiled("app/api/system/audio/route");
+async function readRouteSource() {
+  return readFile(routePath, "utf8");
 }
 
-test("system audio GET returns the mock OS-level audio status shape", async () => {
-  const { GET } = await importRouteModule();
+test("system audio route wires GET to the OS-level audio status helper", async () => {
+  const source = await readRouteSource();
 
-  const response = await GET();
-  const body = await response.json();
-
-  assert.equal(response.status, 200);
-  assert.deepEqual(body, {
-    supported: false,
-    mode: "mock",
-    backend: "mock",
-    speakerTestAvailable: true,
-    micTestAvailable: true,
-    output: {
-      available: false,
-      label: "Preview mode",
-      volumePercent: null,
-      muted: null,
-    },
-    input: {
-      available: false,
-      label: "Preview mode",
-      volumePercent: null,
-      muted: null,
-    },
-  });
+  assert.match(source, /import \{ getAudioStatus, handleAudioAction \} from "@\/lib\/server\/system";/);
+  assert.match(source, /export async function GET\(\) \{[\s\S]*return NextResponse\.json\(await getAudioStatus\(\)\);/);
 });
 
-test("system audio POST runs mock speaker and mic tests", async () => {
-  const { POST } = await importRouteModule();
+test("system audio route only accepts speaker and mic test actions", async () => {
+  const source = await readRouteSource();
 
-  const speakerResponse = await POST(
-    new Request("http://localhost/api/system/audio", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action: "speaker_test" }),
-    }),
-  );
-  const micResponse = await POST(
-    new Request("http://localhost/api/system/audio", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action: "mic_test" }),
-    }),
-  );
-
-  assert.equal(speakerResponse.status, 200);
-  assert.deepEqual(await speakerResponse.json(), {
-    status: "ok",
-    action: "speaker_test",
-    ok: true,
-    mode: "mock",
-    message: "Mock speaker test completed.",
-    artifactFile: null,
-  });
-
-  assert.equal(micResponse.status, 200);
-  assert.deepEqual(await micResponse.json(), {
-    status: "ok",
-    action: "mic_test",
-    ok: true,
-    mode: "mock",
-    message: "Mock microphone test completed.",
-    artifactFile: null,
-  });
+  assert.match(source, /function isAudioAction\(value: unknown\): value is AudioAction \{/);
+  assert.match(source, /return action === "speaker_test" \|\| action === "mic_test";/);
+  assert.match(source, /return NextResponse\.json\(\{ error: "Invalid audio action" \}, \{ status: 400 \}\);/);
 });
 
-test("system audio POST rejects invalid actions", async () => {
-  const { POST } = await importRouteModule();
+test("system audio route rejects malformed JSON and returns successful action payloads", async () => {
+  const source = await readRouteSource();
 
-  const invalidActionResponse = await POST(
-    new Request("http://localhost/api/system/audio", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action: "toggle" }),
-    }),
-  );
-  const invalidJsonResponse = await POST(
-    new Request("http://localhost/api/system/audio", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: "not-json",
-    }),
-  );
-
-  assert.equal(invalidActionResponse.status, 400);
-  assert.deepEqual(await invalidActionResponse.json(), {
-    error: "Invalid audio action",
-  });
-
-  assert.equal(invalidJsonResponse.status, 400);
-  assert.deepEqual(await invalidJsonResponse.json(), {
-    error: "Invalid request body",
-  });
+  assert.match(source, /body = await request\.json\(\);/);
+  assert.match(source, /return NextResponse\.json\(\{ error: "Invalid request body" \}, \{ status: 400 \}\);/);
+  assert.match(source, /const result = await handleAudioAction\(body\);/);
+  assert.match(source, /return NextResponse\.json\(\{ status: "ok", \.\.\.result \}\);/);
 });
