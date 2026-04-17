@@ -23,9 +23,26 @@ export interface WifiConfig {
   commandTimeout: number;
 }
 
+export interface AudioConfig {
+  mode: "hardware" | "mock";
+  commandPrefix: string;
+  commandTimeout: number;
+  statusCommand: string;
+  statusAvailable: boolean;
+  speakerTestCommand: string;
+  speakerTestAvailable: boolean;
+  recordCommand: string;
+  recordAvailable: boolean;
+  playbackCommand: string;
+  playbackAvailable: boolean;
+  micTestDurationSeconds: number;
+  micTestFile: string;
+}
+
 export interface SystemConfig {
   display: DisplayConfig;
   wifi: WifiConfig;
+  audio: AudioConfig;
 }
 
 // ---------------------------------------------------------------------------
@@ -77,6 +94,20 @@ export async function loadSystemConfig(
   const wifiInterface = env.MATTERHUB_WIFI_INTERFACE ?? "wlan0";
   const wifiCommandPrefix = env.MATTERHUB_WIFI_COMMAND_PREFIX ?? "sudo -n";
   const wifiCommandTimeout = Number(env.MATTERHUB_WIFI_COMMAND_TIMEOUT) || 15000;
+  const audioCommandPrefix = env.MATTERHUB_AUDIO_COMMAND_PREFIX ?? "";
+  const audioCommandTimeout = Number(env.MATTERHUB_AUDIO_COMMAND_TIMEOUT) || 20000;
+  const audioStatusCommand = env.MATTERHUB_AUDIO_STATUS_COMMAND ?? "wpctl";
+  const audioSpeakerTestCommand =
+    env.MATTERHUB_AUDIO_SPEAKER_TEST_COMMAND ?? "speaker-test";
+  const audioRecordCommand = env.MATTERHUB_AUDIO_RECORD_COMMAND ?? "arecord";
+  const audioPlaybackCommand = env.MATTERHUB_AUDIO_PLAYBACK_COMMAND ?? "aplay";
+  const audioMicTestDurationSeconds = Math.max(
+    1,
+    Number(env.MATTERHUB_AUDIO_MIC_TEST_DURATION_SECONDS) || 3,
+  );
+  const audioMicTestFile =
+    env.MATTERHUB_AUDIO_MIC_TEST_FILE ??
+    path.join(process.cwd(), ".tmp", "audio-mic-test.wav");
 
   // Auto-detect hardware availability
   const explicitMode = env.MATTERHUB_SYSTEM_MODE?.trim().toLowerCase();
@@ -87,6 +118,16 @@ export async function loadSystemConfig(
     forceHardware || (!forceMock && (await fileAccessible(brightnessPath)));
   const wifiHardwareAvailable =
     forceHardware || (!forceMock && commandExists("nmcli"));
+  const audioStatusAvailable = commandExists(audioStatusCommand);
+  const audioSpeakerTestAvailable = commandExists(audioSpeakerTestCommand);
+  const audioRecordAvailable = commandExists(audioRecordCommand);
+  const audioPlaybackAvailable = commandExists(audioPlaybackCommand);
+  const audioHardwareAvailable =
+    forceHardware ||
+    (!forceMock &&
+      (audioStatusAvailable ||
+        audioSpeakerTestAvailable ||
+        (audioRecordAvailable && audioPlaybackAvailable)));
 
   cached = {
     display: {
@@ -101,6 +142,21 @@ export async function loadSystemConfig(
       interface: wifiInterface,
       commandPrefix: wifiCommandPrefix,
       commandTimeout: wifiCommandTimeout,
+    },
+    audio: {
+      mode: audioHardwareAvailable ? "hardware" : "mock",
+      commandPrefix: audioCommandPrefix,
+      commandTimeout: audioCommandTimeout,
+      statusCommand: audioStatusCommand,
+      statusAvailable: audioStatusAvailable,
+      speakerTestCommand: audioSpeakerTestCommand,
+      speakerTestAvailable: audioSpeakerTestAvailable,
+      recordCommand: audioRecordCommand,
+      recordAvailable: audioRecordAvailable,
+      playbackCommand: audioPlaybackCommand,
+      playbackAvailable: audioPlaybackAvailable,
+      micTestDurationSeconds: audioMicTestDurationSeconds,
+      micTestFile: audioMicTestFile,
     },
   };
 
