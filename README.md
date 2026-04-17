@@ -31,6 +31,7 @@ For the agent-friendly repo boundary and feature workflow, see `docs/development
 - **Production standalone check**: `npm run build` then `npm run start:standalone`
 
 Mock mode should be the default for UI and feature work here. It lets you preview changes on this machine without touching Pi IO like display brightness or Wi-Fi.
+Phase 1 OS-level audio diagnostics are different: on non-Pi development machines, the audio status/test path should report `supported: false` with `mode: "unsupported"` instead of pretending a healthy local audio appliance exists.
 
 ## Architecture
 
@@ -54,3 +55,4 @@ Auto-returns to ambient clock after 30 seconds of inactivity.
 - The app is tuned globally for low-power kiosk hardware, with Framer Motion retained only for the curved navigation drawer.
 - Production builds use Next.js standalone output.
 - Recommended target is Raspberry Pi OS 64-bit Bookworm with the default `labwc` Wayland session and Chromium kiosk mode.
+- Primary speaker/mic ownership is moving to OS-level helpers on the Pi. Keep Chromium focused on kiosk rendering; do not rely on Chromium `--alsa-input-device` / `--alsa-output-device` flags for the primary audio path.

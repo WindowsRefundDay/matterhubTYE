@@ -47,3 +47,22 @@ Reboot or restart the graphical session after enabling the Node service.
 
 Before tuning browser flags any further, verify the real kiosk session in `chrome://gpu`.
 If Chromium is already hardware accelerated, keep the default flag set above and avoid experimental Vulkan or ANGLE overrides.
+
+## Audio ownership and host requirements
+
+Phase 1 audio diagnostics treat the Raspberry Pi as the real audio owner:
+
+- keep Chromium as a kiosk renderer only
+- do **not** add `--alsa-input-device` or `--alsa-output-device` flags to the Chromium launcher for the primary audio path
+- keep appliance audio defaults in the server-side system config instead of browser startup flags
+
+Required host tools and access on the Pi:
+
+- `aplay` for speaker-test playback
+- `arecord` for the short mic test
+- permission for the kiosk/service user to access ALSA devices (typically via the `audio` group or an equivalent appliance-specific access rule)
+
+Expected non-Pi behavior during development:
+
+- local non-Pi hosts should surface audio diagnostics as unsupported
+- `/api/system/audio` should report `supported: false` with `mode: "unsupported"` instead of a fake-healthy mock appliance

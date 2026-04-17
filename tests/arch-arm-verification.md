@@ -30,8 +30,8 @@ npm run build
 
 ## Audio output validation notes
 
-- The audio test flow now logs to `.tmp/audio-test-events.jsonl` by default.
-- The browser can also expose recent events at `/api/system/audio-test-log`.
-- On a Pi, validate both:
-  - whether audio is actually heard from the expected sink
-  - whether the logs report `audio_test_sink_applied` or `audio_test_sink_failed`
+- Phase 1 audio ownership should be validated through the OS-level `/api/system/audio` status/test flow on Raspberry Pi hardware.
+- On non-Pi development machines, audio diagnostics should explicitly return `supported: false` with `mode: "unsupported"`.
+- Chromium kiosk startup should not depend on `--alsa-input-device` or `--alsa-output-device`.
+- Pi deployment notes should document the required host tools (`aplay`, `arecord`) and ALSA device access for the service user.
+- The browser audio test log at `.tmp/audio-test-events.jsonl` and `/api/system/audio-test-log` remains useful as a legacy/fallback diagnostic only.
