@@ -246,6 +246,14 @@ test("AudioClient reads sink and source status using injected command dependenci
       mode: "hardware",
       commandPrefix: "",
       commandTimeout: 20000,
+      playbackDevice: "hw:0,0",
+      playbackLabel: "Pi 3.5mm output",
+      captureDevice: "hw:1,0",
+      captureLabel: "USB microphone",
+      mixerCommand: "amixer",
+      mixerAvailable: true,
+      mixerControl: "Headphone",
+      mixerCardIndex: 0,
       statusCommand: "wpctl",
       statusAvailable: true,
       speakerTestCommand: "speaker-test",
@@ -304,6 +312,14 @@ test("AudioClient builds speaker and microphone test commands with injected depe
       mode: "hardware",
       commandPrefix: "env XDG_RUNTIME_DIR=/run/user/1000",
       commandTimeout: 20000,
+      playbackDevice: "hw:0,0",
+      playbackLabel: "Pi 3.5mm output",
+      captureDevice: "hw:1,0",
+      captureLabel: "USB microphone",
+      mixerCommand: "amixer",
+      mixerAvailable: true,
+      mixerControl: "Headphone",
+      mixerCardIndex: 0,
       statusCommand: "wpctl",
       statusAvailable: true,
       speakerTestCommand: "speaker-test",
@@ -338,10 +354,62 @@ test("AudioClient builds speaker and microphone test commands with injected depe
   assert.deepEqual(mkdirCalls, [[ "/tmp/audio tests", { recursive: true } ]]);
   assert.deepEqual(rmCalls, [[ "/tmp/audio tests/mic check.wav", { force: true } ]]);
   assert.deepEqual(commands, [
-    "env XDG_RUNTIME_DIR=/run/user/1000 speaker-test -t sine -f 440 -l 1",
-    "env XDG_RUNTIME_DIR=/run/user/1000 arecord -d 3 -f S16_LE -r 16000 -c 1 '/tmp/audio tests/mic check.wav'",
-    "env XDG_RUNTIME_DIR=/run/user/1000 aplay '/tmp/audio tests/mic check.wav'",
+    "env XDG_RUNTIME_DIR=/run/user/1000 speaker-test -D 'hw:0,0' -t sine -f 440 -l 1",
+    "env XDG_RUNTIME_DIR=/run/user/1000 arecord -D 'hw:1,0' -d 3 -f S16_LE -r 16000 -c 1 '/tmp/audio tests/mic check.wav'",
+    "env XDG_RUNTIME_DIR=/run/user/1000 aplay -D 'hw:0,0' '/tmp/audio tests/mic check.wav'",
   ]);
+});
+
+test("AudioClient falls back to configured labels and amixer volume when wpctl is unavailable", async () => {
+  const { AudioClient } = await importCompiled("lib/server/system/audio/client");
+
+  const commands = [];
+  const client = new AudioClient(
+    {
+      mode: "hardware",
+      commandPrefix: "",
+      commandTimeout: 20000,
+      playbackDevice: "hw:0,0",
+      playbackLabel: "bcm2835 Headphones (3.5 mm jack)",
+      captureDevice: "hw:1,0",
+      captureLabel: "USB microphone",
+      mixerCommand: "amixer",
+      mixerAvailable: true,
+      mixerControl: "Headphone",
+      mixerCardIndex: 0,
+      statusCommand: "wpctl",
+      statusAvailable: false,
+      speakerTestCommand: "speaker-test",
+      speakerTestAvailable: true,
+      recordCommand: "arecord",
+      recordAvailable: true,
+      playbackCommand: "aplay",
+      playbackAvailable: true,
+      micTestDurationSeconds: 3,
+      micTestFile: "/tmp/audio-mic-test.wav",
+    },
+    {
+      async mkdir() {},
+      async rm() {},
+      runCommand(command) {
+        commands.push(command);
+        if (command === "amixer -c 0 sget 'Headphone'") {
+          return "Mono: Playback 88 [69%] [-18.00dB] [on]";
+        }
+        throw new Error(`Unexpected command: ${command}`);
+      },
+    },
+  );
+
+  const status = await client.getStatus();
+
+  assert.equal(status.output.available, true);
+  assert.equal(status.output.label, "bcm2835 Headphones (3.5 mm jack)");
+  assert.equal(status.output.volumePercent, 69);
+  assert.equal(status.output.muted, false);
+  assert.equal(status.input.available, true);
+  assert.equal(status.input.label, "USB microphone");
+  assert.deepEqual(commands, ["amixer -c 0 sget 'Headphone'"]);
 });
 
 function createDisplayDeps(files) {

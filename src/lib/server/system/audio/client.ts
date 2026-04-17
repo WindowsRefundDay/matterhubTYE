@@ -60,6 +60,20 @@ function parseLabel(output: string): string | null {
   return null;
 }
 
+function parseAmixerVolume(
+  output: string,
+): Pick<AudioEndpointStatus, "volumePercent" | "muted"> {
+  const match = /\[(\d+)%\].*?\[(on|off)\]/i.exec(output);
+  if (!match) {
+    return { volumePercent: null, muted: null };
+  }
+
+  return {
+    volumePercent: Number.parseInt(match[1] ?? "", 10),
+    muted: (match[2] ?? "").toLowerCase() === "off",
+  };
+}
+
 export class AudioClient {
   constructor(
     private readonly config: AudioConfig,
@@ -92,7 +106,9 @@ export class AudioClient {
       );
     }
 
-    this.run(`${this.config.speakerTestCommand} -t sine -f 440 -l 1`);
+    this.run(
+      `${this.config.speakerTestCommand} -D ${quoteShellArg(this.config.playbackDevice)} -t sine -f 440 -l 1`,
+    );
     return {
       action: "speaker_test",
       ok: true,
@@ -117,11 +133,11 @@ export class AudioClient {
 
     const fileArg = quoteShellArg(this.config.micTestFile);
     this.run(
-      `${this.config.recordCommand} -d ${this.config.micTestDurationSeconds} -f S16_LE -r 16000 -c 1 ${fileArg}`,
+      `${this.config.recordCommand} -D ${quoteShellArg(this.config.captureDevice)} -d ${this.config.micTestDurationSeconds} -f S16_LE -r 16000 -c 1 ${fileArg}`,
       this.config.commandTimeout + this.config.micTestDurationSeconds * 1000,
     );
     this.run(
-      `${this.config.playbackCommand} ${fileArg}`,
+      `${this.config.playbackCommand} -D ${quoteShellArg(this.config.playbackDevice)} ${fileArg}`,
       this.config.commandTimeout + this.config.micTestDurationSeconds * 1000,
     );
 
@@ -136,9 +152,16 @@ export class AudioClient {
 
   private async inspectEndpoint(endpoint: "@DEFAULT_AUDIO_SINK@" | "@DEFAULT_AUDIO_SOURCE@"): Promise<AudioEndpointStatus> {
     if (!this.config.statusAvailable) {
+      if (endpoint === "@DEFAULT_AUDIO_SINK@") {
+        return this.getConfiguredFallbackEndpoint(
+          this.config.playbackLabel,
+          this.readMixerStatus(),
+        );
+      }
+
       return {
-        available: false,
-        label: null,
+        available: this.config.recordAvailable,
+        label: this.config.captureLabel,
         volumePercent: null,
         muted: null,
       };
@@ -153,17 +176,58 @@ export class AudioClient {
       const { volumePercent, muted } = parseVolume(volumeOutput);
       return {
         available: true,
-        label: parseLabel(inspectOutput),
+        label:
+          parseLabel(inspectOutput) ??
+          (endpoint === "@DEFAULT_AUDIO_SINK@"
+            ? this.config.playbackLabel
+            : this.config.captureLabel),
         volumePercent,
         muted,
       };
     } catch {
+      if (endpoint === "@DEFAULT_AUDIO_SINK@") {
+        return this.getConfiguredFallbackEndpoint(
+          this.config.playbackLabel,
+          this.readMixerStatus(),
+        );
+      }
+
       return {
-        available: false,
-        label: null,
+        available: this.config.recordAvailable,
+        label: this.config.captureLabel,
         volumePercent: null,
         muted: null,
       };
+    }
+  }
+
+  private getConfiguredFallbackEndpoint(
+    label: string,
+    volume: Pick<AudioEndpointStatus, "volumePercent" | "muted">,
+  ): AudioEndpointStatus {
+    return {
+      available: true,
+      label,
+      volumePercent: volume.volumePercent,
+      muted: volume.muted,
+    };
+  }
+
+  private readMixerStatus(): Pick<AudioEndpointStatus, "volumePercent" | "muted"> {
+    if (!this.config.mixerAvailable) {
+      return { volumePercent: null, muted: null };
+    }
+
+    const cardFlag =
+      this.config.mixerCardIndex == null ? "" : ` -c ${this.config.mixerCardIndex}`;
+
+    try {
+      const output = this.run(
+        `${this.config.mixerCommand}${cardFlag} sget ${quoteShellArg(this.config.mixerControl)}`,
+      );
+      return parseAmixerVolume(output);
+    } catch {
+      return { volumePercent: null, muted: null };
     }
   }
 

@@ -27,6 +27,14 @@ export interface AudioConfig {
   mode: "hardware" | "mock";
   commandPrefix: string;
   commandTimeout: number;
+  playbackDevice: string;
+  playbackLabel: string;
+  captureDevice: string;
+  captureLabel: string;
+  mixerCommand: string;
+  mixerAvailable: boolean;
+  mixerControl: string;
+  mixerCardIndex: number | null;
   statusCommand: string;
   statusAvailable: boolean;
   speakerTestCommand: string;
@@ -96,6 +104,19 @@ export async function loadSystemConfig(
   const wifiCommandTimeout = Number(env.MATTERHUB_WIFI_COMMAND_TIMEOUT) || 15000;
   const audioCommandPrefix = env.MATTERHUB_AUDIO_COMMAND_PREFIX ?? "";
   const audioCommandTimeout = Number(env.MATTERHUB_AUDIO_COMMAND_TIMEOUT) || 20000;
+  const audioPlaybackDevice = env.MATTERHUB_AUDIO_PLAYBACK_DEVICE ?? "hw:0,0";
+  const audioPlaybackLabel =
+    env.MATTERHUB_AUDIO_PLAYBACK_LABEL ?? "bcm2835 Headphones (3.5 mm jack)";
+  const audioCaptureDevice = env.MATTERHUB_AUDIO_CAPTURE_DEVICE ?? "hw:1,0";
+  const audioCaptureLabel =
+    env.MATTERHUB_AUDIO_CAPTURE_LABEL ?? "USB microphone";
+  const audioMixerCommand = env.MATTERHUB_AUDIO_MIXER_COMMAND ?? "amixer";
+  const audioMixerControl = env.MATTERHUB_AUDIO_MIXER_CONTROL ?? "Headphone";
+  const audioMixerCardIndexRaw = env.MATTERHUB_AUDIO_MIXER_CARD_INDEX;
+  const audioMixerCardIndex =
+    audioMixerCardIndexRaw == null || audioMixerCardIndexRaw.trim() === ""
+      ? 0
+      : Number(audioMixerCardIndexRaw);
   const audioStatusCommand = env.MATTERHUB_AUDIO_STATUS_COMMAND ?? "wpctl";
   const audioSpeakerTestCommand =
     env.MATTERHUB_AUDIO_SPEAKER_TEST_COMMAND ?? "speaker-test";
@@ -119,6 +140,7 @@ export async function loadSystemConfig(
   const wifiHardwareAvailable =
     forceHardware || (!forceMock && commandExists("nmcli"));
   const audioStatusAvailable = commandExists(audioStatusCommand);
+  const audioMixerAvailable = commandExists(audioMixerCommand);
   const audioSpeakerTestAvailable = commandExists(audioSpeakerTestCommand);
   const audioRecordAvailable = commandExists(audioRecordCommand);
   const audioPlaybackAvailable = commandExists(audioPlaybackCommand);
@@ -147,6 +169,15 @@ export async function loadSystemConfig(
       mode: audioHardwareAvailable ? "hardware" : "mock",
       commandPrefix: audioCommandPrefix,
       commandTimeout: audioCommandTimeout,
+      playbackDevice: audioPlaybackDevice,
+      playbackLabel: audioPlaybackLabel,
+      captureDevice: audioCaptureDevice,
+      captureLabel: audioCaptureLabel,
+      mixerCommand: audioMixerCommand,
+      mixerAvailable: audioMixerAvailable,
+      mixerControl: audioMixerControl,
+      mixerCardIndex:
+        Number.isFinite(audioMixerCardIndex) ? audioMixerCardIndex : null,
       statusCommand: audioStatusCommand,
       statusAvailable: audioStatusAvailable,
       speakerTestCommand: audioSpeakerTestCommand,
