@@ -44,6 +44,8 @@ export interface AudioConfig {
   playbackCommand: string;
   playbackAvailable: boolean;
   micTestDurationSeconds: number;
+  micTestSampleRate: number;
+  micTestChannels: number;
   micTestFile: string;
 }
 
@@ -126,6 +128,14 @@ export async function loadSystemConfig(
     1,
     Number(env.MATTERHUB_AUDIO_MIC_TEST_DURATION_SECONDS) || 3,
   );
+  const audioMicTestSampleRate = Math.max(
+    8000,
+    Number(env.MATTERHUB_AUDIO_MIC_TEST_SAMPLE_RATE) || 48000,
+  );
+  const audioMicTestChannels = Math.max(
+    1,
+    Number(env.MATTERHUB_AUDIO_MIC_TEST_CHANNELS) || 2,
+  );
   const audioMicTestFile =
     env.MATTERHUB_AUDIO_MIC_TEST_FILE ??
     path.join(process.cwd(), ".tmp", "audio-mic-test.wav");
@@ -187,6 +197,8 @@ export async function loadSystemConfig(
       playbackCommand: audioPlaybackCommand,
       playbackAvailable: audioPlaybackAvailable,
       micTestDurationSeconds: audioMicTestDurationSeconds,
+      micTestSampleRate: audioMicTestSampleRate,
+      micTestChannels: audioMicTestChannels,
       micTestFile: audioMicTestFile,
     },
   };

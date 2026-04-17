@@ -263,6 +263,8 @@ test("AudioClient reads sink and source status using injected command dependenci
       playbackCommand: "aplay",
       playbackAvailable: true,
       micTestDurationSeconds: 3,
+      micTestSampleRate: 48000,
+      micTestChannels: 2,
       micTestFile: "/tmp/audio-mic-test.wav",
     },
     {
@@ -329,6 +331,8 @@ test("AudioClient builds speaker and microphone test commands with injected depe
       playbackCommand: "aplay",
       playbackAvailable: true,
       micTestDurationSeconds: 3,
+      micTestSampleRate: 48000,
+      micTestChannels: 2,
       micTestFile: "/tmp/audio tests/mic check.wav",
     },
     {
@@ -355,7 +359,7 @@ test("AudioClient builds speaker and microphone test commands with injected depe
   assert.deepEqual(rmCalls, [[ "/tmp/audio tests/mic check.wav", { force: true } ]]);
   assert.deepEqual(commands, [
     "env XDG_RUNTIME_DIR=/run/user/1000 speaker-test -D 'hw:0,0' -t sine -f 440 -l 1",
-    "env XDG_RUNTIME_DIR=/run/user/1000 arecord -D 'hw:1,0' -d 3 -f S16_LE -r 16000 -c 1 '/tmp/audio tests/mic check.wav'",
+    "env XDG_RUNTIME_DIR=/run/user/1000 arecord -D 'hw:1,0' -d 3 -f S16_LE -r 48000 -c 2 '/tmp/audio tests/mic check.wav'",
     "env XDG_RUNTIME_DIR=/run/user/1000 aplay -D 'hw:0,0' '/tmp/audio tests/mic check.wav'",
   ]);
 });
@@ -386,6 +390,8 @@ test("AudioClient falls back to configured labels and amixer volume when wpctl i
       playbackCommand: "aplay",
       playbackAvailable: true,
       micTestDurationSeconds: 3,
+      micTestSampleRate: 48000,
+      micTestChannels: 2,
       micTestFile: "/tmp/audio-mic-test.wav",
     },
     {

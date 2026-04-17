@@ -133,7 +133,7 @@ export class AudioClient {
 
     const fileArg = quoteShellArg(this.config.micTestFile);
     this.run(
-      `${this.config.recordCommand} -D ${quoteShellArg(this.config.captureDevice)} -d ${this.config.micTestDurationSeconds} -f S16_LE -r 16000 -c 1 ${fileArg}`,
+      `${this.config.recordCommand} -D ${quoteShellArg(this.config.captureDevice)} -d ${this.config.micTestDurationSeconds} -f S16_LE -r ${this.config.micTestSampleRate} -c ${this.config.micTestChannels} ${fileArg}`,
       this.config.commandTimeout + this.config.micTestDurationSeconds * 1000,
     );
     this.run(
