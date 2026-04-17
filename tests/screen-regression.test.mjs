@@ -61,8 +61,10 @@ test("SettingsPanel preserves the appliance status summary block", async () => {
   assert.match(html, /Provisioning/);
   assert.match(html, /Home Assistant pairing is not configured yet/);
   assert.match(html, /Setup Required/);
-  assert.match(html, /Output Test/);
+  assert.match(html, /Host-owned audio/);
   assert.match(html, /Routing/);
+  assert.match(html, /Speaker output/);
+  assert.match(html, /Microphone input/);
   assert.match(html, /800 x 480/);
   assert.doesNotMatch(html, />Connected</);
 });

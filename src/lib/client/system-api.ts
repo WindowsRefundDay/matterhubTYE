@@ -2,6 +2,9 @@
 
 import type { AudioTestLogEntry } from "@/types/audio";
 import type {
+  AudioAction,
+  AudioStatus,
+  AudioTestResult,
   DisplayAction,
   DisplayState,
   WifiAction,
@@ -20,6 +23,10 @@ interface WifiActionResponse {
 interface AudioTestLogResponse {
   status: "ok";
   entry: Record<string, unknown>;
+}
+
+interface AudioActionResponse extends AudioTestResult {
+  status: "ok";
 }
 
 async function readJson<T>(response: Response): Promise<T> {
@@ -85,4 +92,21 @@ export async function postAudioTestLog(
 
   const payload = await readJson<AudioTestLogResponse>(response);
   return payload.entry;
+}
+
+export async function fetchAudioStatus(): Promise<AudioStatus> {
+  const response = await fetch("/api/system/audio", { cache: "no-store" });
+  return readJson<AudioStatus>(response);
+}
+
+export async function postAudioAction(
+  action: AudioAction,
+): Promise<AudioTestResult> {
+  const response = await fetch("/api/system/audio", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(action),
+  });
+
+  return readJson<AudioActionResponse>(response);
 }

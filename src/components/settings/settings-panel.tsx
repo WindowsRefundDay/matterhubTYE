@@ -4,40 +4,30 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { Icon } from "@/components/ui/icon";
 import { SettingRow } from "./setting-row";
 import { useSmartHomeRuntime } from "@/hooks/use-smart-home";
-import { useAudioOutputDevices } from "@/hooks/use-audio-output-devices";
 import { useDisplayState } from "@/hooks/use-display-state";
 import { useWifiStatus } from "@/hooks/use-wifi-status";
-import { useLocalAudioPlayer } from "@/hooks/use-local-audio-player";
-import { postAudioTestLog } from "@/lib/client/system-api";
+import {
+  fetchAudioStatus,
+  postAudioAction,
+  postAudioTestLog,
+} from "@/lib/client/system-api";
 import { cn } from "@/lib/utils";
 import { useTap } from "@/hooks/use-tap";
 import { WifiPanel } from "./wifi-panel";
 import { DisplayPanel } from "./display-panel";
-import type { AudioOutputOption, AudioTrack } from "@/types/audio";
-
-const AUDIO_TEST_TRACK_SRC = "/audio/showtime-reference.mp3";
-const AUDIO_TEST_TRACK: AudioTrack = {
-  id: "showtime-reference",
-  title: "Rolling Like This",
-  artist: "Don Toliver",
-  src: AUDIO_TEST_TRACK_SRC,
-  accentLabel: "Showtime reference",
-};
+import type { AudioAction, AudioStatus } from "@/types/system";
 
 export function SettingsPanel() {
   const [notifications, setNotifications] = useState(true);
   const [darkMode] = useState(true);
   const [wifiView, setWifiView] = useState(false);
   const [displayView, setDisplayView] = useState(false);
-  const [audioOutputId, setAudioOutputId] = useState<string>("system-default");
+  const [audioStatus, setAudioStatus] = useState<AudioStatus | null>(null);
+  const [audioLoading, setAudioLoading] = useState(true);
+  const [audioAction, setAudioAction] = useState<AudioAction["action"] | null>(null);
+  const [audioMessage, setAudioMessage] = useState<string | null>(null);
   const { backendMode, backendStatus, diagnostics, errorMessage, lastSyncAt } =
     useSmartHomeRuntime();
-  const {
-    outputs: audioOutputs,
-    loading: audioOutputsLoading,
-    support: audioSupport,
-    pickBrowserOutput,
-  } = useAudioOutputDevices();
 
   const {
     data: wifiSummary,
@@ -54,38 +44,57 @@ export function SettingsPanel() {
         event,
         details: {
           ...details,
-          trackId: AUDIO_TEST_TRACK.id,
           userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
           secureContext:
             typeof window !== "undefined" ? window.isSecureContext : false,
-          audioSupport,
         },
       }).catch(() => {
         // logging is best-effort and should never block playback or navigation
       });
     },
-    [audioSupport],
+    [],
   );
 
-  const audioOutput =
-    audioOutputs.find((option) => option.id === audioOutputId) ??
-    audioOutputs[0] ??
-    {
-      id: "system-default",
-      label: "System default",
-      description: "Use the kiosk browser's current output route.",
-      source: "system-default",
-    };
+  const refreshAudioStatus = useCallback(async () => {
+    setAudioLoading(true);
+    try {
+      const next = await fetchAudioStatus();
+      setAudioStatus(next);
+    } catch (error) {
+      setAudioStatus(null);
+      setAudioMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setAudioLoading(false);
+    }
+  }, []);
 
-  const { isPlaying, error: audioError, togglePlayPause } = useLocalAudioPlayer(
-    AUDIO_TEST_TRACK,
-    {
-      autoPlay: false,
-      outputDeviceId: audioOutput.id,
-      outputLabel: audioOutput.label,
-      support: audioSupport,
-      logEvent: logAudioEvent,
+  useEffect(() => {
+    void refreshAudioStatus();
+  }, [refreshAudioStatus]);
+
+  const runAudioAction = useCallback(
+    async (action: AudioAction["action"]) => {
+      setAudioAction(action);
+      logAudioEvent("audio_system_action_started", { action });
+      try {
+        const result = await postAudioAction({ action });
+        setAudioMessage(result.message);
+        logAudioEvent("audio_system_action_completed", {
+          action,
+          ok: result.ok,
+          mode: result.mode,
+          artifactFile: result.artifactFile,
+        });
+        await refreshAudioStatus();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setAudioMessage(message);
+        logAudioEvent("audio_system_action_failed", { action, message });
+      } finally {
+        setAudioAction(null);
+      }
     },
+    [logAudioEvent, refreshAudioStatus],
   );
 
   // Refresh summaries when returning from sub-panels
@@ -112,42 +121,15 @@ export function SettingsPanel() {
   const wifiTap = useTap(() => setWifiView(true));
   const displayTap = useTap(() => setDisplayView(true));
 
-  const handleAudioOutputSelection = useCallback(
-    (option: AudioOutputOption) => {
-      setAudioOutputId(option.id);
-      logAudioEvent("audio_output_selected", {
-        outputId: option.id,
-        outputLabel: option.label,
-        source: option.source ?? "unknown",
-      });
-    },
-    [logAudioEvent],
-  );
-
-  const handleBrowserOutputPicker = useCallback(async () => {
-    try {
-      const selected = await pickBrowserOutput();
-      handleAudioOutputSelection(selected);
-      logAudioEvent("audio_output_picker_succeeded", {
-        outputId: selected.id,
-        outputLabel: selected.label,
-      });
-    } catch (pickerError) {
-      logAudioEvent("audio_output_picker_failed", {
-        error: pickerError instanceof Error ? pickerError.message : String(pickerError),
-      });
-    }
-  }, [handleAudioOutputSelection, logAudioEvent, pickBrowserOutput]);
-
   const statusSummary = useMemo(() => {
     if (backendMode === "home-assistant" && backendStatus === "ok") {
       return {
         title: "Connected",
         subtitle: lastSyncAt
           ? `Synced ${new Date(lastSyncAt).toLocaleTimeString([], {
-            hour: "numeric",
-            minute: "2-digit",
-          })}`
+              hour: "numeric",
+              minute: "2-digit",
+            })}`
           : "Live state is active",
         icon: "check",
         tone: "bg-[var(--minimalist-pastel-green)] text-[var(--minimalist-pastel-green-fg)] border-[var(--minimalist-border)]",
@@ -198,8 +180,7 @@ export function SettingsPanel() {
         id: "demo",
         icon: "sparkles",
         title: "Demo Mode",
-        description:
-          "Currently showing mock device data.",
+        description: "Currently showing mock device data.",
         tone: "bg-[var(--minimalist-pastel-blue)] text-[var(--minimalist-pastel-blue-fg)]",
       });
     }
@@ -207,7 +188,6 @@ export function SettingsPanel() {
     return alerts;
   }, [backendMode]);
 
-  // ── Wi-Fi sub-page ──
   if (wifiView) {
     return <div data-theme="minimalist" className="h-full"><WifiPanel onBack={() => setWifiView(false)} /></div>;
   }
@@ -216,7 +196,6 @@ export function SettingsPanel() {
     return <div data-theme="minimalist" className="h-full"><DisplayPanel onBack={() => setDisplayView(false)} /></div>;
   }
 
-  // ── Wi-Fi summary for the row ──
   let displaySubtitle = "Loading...";
   if (displaySummary) {
     if (!displaySummary.supported) {
@@ -241,6 +220,11 @@ export function SettingsPanel() {
     }
   }
 
+  const audioStatusLine = audioLoading
+    ? "Checking Raspberry Pi audio services"
+    : audioStatus?.supported
+      ? `Backend: ${audioStatus.backend}`
+      : "Preview mode — host audio unavailable on this machine";
 
   return (
     <div data-theme="minimalist" className="relative h-full bg-background overflow-hidden">
@@ -345,74 +329,67 @@ export function SettingsPanel() {
         </Section>
 
         <Section title="Audio Configuration">
-          <div className="flex w-full items-center gap-5 py-5 border-b border-border">
-            <button
-              type="button"
-              onClick={() => void togglePlayPause()}
-              className={cn(
-                "flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border transition-all active:scale-95",
-                isPlaying
+          <div className="border-b border-border py-5">
+            <div className="flex items-center gap-5">
+              <div className={cn(
+                "flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border",
+                audioStatus?.supported
                   ? "bg-foreground text-background"
-                  : "bg-muted/5 text-foreground border-border"
-              )}
-            >
-              <Icon name={isPlaying ? "pause" : "play"} size={18} />
-            </button>
-            <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-medium text-foreground">Output Test</p>
-              <p className="text-[12px] text-muted truncate">
-                {audioError ??
-                  (audioOutputsLoading
-                    ? "Checking output routes"
-                    : isPlaying
-                      ? `Playing: ${audioOutput.label}`
-                      : "Play reference track")}
-              </p>
+                  : "bg-muted/5 text-muted border-border"
+              )}>
+                <Icon name="speaker" size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-medium text-foreground">Host-owned audio</p>
+                <p className="text-[12px] text-muted">{audioStatusLine}</p>
+              </div>
             </div>
           </div>
 
-          <div className="py-6 border-b border-border">
+          <div className="border-b border-border py-6">
             <p className="text-[15px] font-medium text-foreground">Routing</p>
-            <p className="mt-1 text-[12px] leading-relaxed text-muted mb-4">
-              {audioOutput.description}
+            <p className="mt-1 text-[12px] leading-relaxed text-muted">
+              Speaker and microphone tests now run on the Raspberry Pi host instead of inside Chromium.
             </p>
 
-            <div className="flex flex-wrap gap-2 mb-4">
-              {audioOutputs.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => handleAudioOutputSelection(option)}
-                  className={cn(
-                    "rounded-md border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors",
-                    option.id === audioOutputId
-                      ? "bg-foreground text-background border-foreground"
-                      : "bg-background text-muted border-border hover:border-muted"
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/5 px-4 py-4">
-              <div className="min-w-0">
-                <p className="text-[13px] font-bold uppercase tracking-wider text-foreground">System Selector</p>
-                <p className="mt-1 text-[11px] leading-relaxed text-muted">
-                  Manual browser route selection.
+            <div className="mt-4 grid grid-cols-1 gap-3">
+              <div className="rounded-lg border border-border bg-muted/5 px-4 py-4">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Speaker output</p>
+                <p className="mt-1 text-[13px] text-muted">
+                  {audioLoading ? "Loading output route" : audioStatus?.output.label ?? "Unavailable"}
                 </p>
               </div>
+              <div className="rounded-lg border border-border bg-muted/5 px-4 py-4">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Microphone input</p>
+                <p className="mt-1 text-[13px] text-muted">
+                  {audioLoading ? "Loading input route" : audioStatus?.input.label ?? "Unavailable"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => void handleBrowserOutputPicker()}
-                disabled={!audioSupport.selectAudioOutput || !audioSupport.secureContext}
-                className={cn(
-                  "rounded-md bg-foreground px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-background transition-colors active:scale-95 disabled:opacity-30 disabled:active:scale-100"
-                )}
+                onClick={() => void runAudioAction("speaker_test")}
+                disabled={audioAction !== null || !audioStatus?.speakerTestAvailable}
+                className="rounded-lg bg-foreground px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-background transition-all active:scale-95 disabled:opacity-30 disabled:active:scale-100"
               >
-                Launch Picker
+                {audioAction === "speaker_test" ? "Running..." : "Speaker test"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void runAudioAction("mic_test")}
+                disabled={audioAction !== null || !audioStatus?.micTestAvailable}
+                className="rounded-lg border border-border px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-foreground transition-all active:scale-95 disabled:opacity-30 disabled:active:scale-100"
+              >
+                {audioAction === "mic_test" ? "Recording..." : "Mic test"}
               </button>
             </div>
+
+            <p className="mt-4 text-[12px] leading-relaxed text-muted">
+              {audioMessage ??
+                "Use the host-owned speaker and mic tests to validate the kiosk audio path."}
+            </p>
           </div>
         </Section>
 
