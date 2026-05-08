@@ -9,8 +9,8 @@ async function callHa(
   request: SmartHomeActionRequest,
   ctx: ToolContext
 ): Promise<ToolResult> {
-  if (!ctx.haConfig || ctx.haConfig.mode === "mock") {
-    return { success: true, message: "[Mock] Action acknowledged — no real device was changed." };
+  if (!ctx.haConfig || ctx.haConfig.mode === "demo") {
+    return { success: true, message: "[Demo] Action acknowledged — no real device was changed." };
   }
 
   try {

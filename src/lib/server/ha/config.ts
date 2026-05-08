@@ -1,18 +1,11 @@
 import "server-only";
 
 import { readFile } from "node:fs/promises";
+import { readDemoSettings } from "./demo/settings";
 import { HomeAssistantConfigError } from "./errors";
 import type { HomeAssistantRuntimeConfig } from "./types";
 
 const DEFAULT_HOME_ASSISTANT_URL = "http://127.0.0.1:8123";
-
-function normalizeBoolean(value: string | undefined): boolean {
-  if (!value) {
-    return false;
-  }
-
-  return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
-}
 
 async function readTokenFromFile(tokenPath: string | undefined) {
   if (!tokenPath) {
@@ -28,23 +21,22 @@ export async function loadHomeAssistantConfig(
 ): Promise<HomeAssistantRuntimeConfig> {
   const errors: string[] = [];
   const backend = env.MATTERHUB_SMART_HOME_BACKEND?.trim().toLowerCase();
-  const mockEnabled = normalizeBoolean(env.MATTERHUB_ALLOW_MOCK_DATA);
   const baseUrl =
     env.MATTERHUB_HOME_ASSISTANT_URL?.trim() || DEFAULT_HOME_ASSISTANT_URL;
   const tokenPath = env.MATTERHUB_HOME_ASSISTANT_TOKEN_FILE?.trim() || null;
 
+  // Precedence: UI toggle (file) ON forces demo.
+  // Otherwise env backend decides. Unset/home-assistant => home-assistant.
+  const toggle = await readDemoSettings(env);
+
   let mode: HomeAssistantRuntimeConfig["mode"] = "home-assistant";
-  if (backend === "mock") {
-    mode = "mock";
+  if (toggle.enabled) {
+    mode = "demo";
+  } else if (backend === "demo" || backend === "mock") {
+    mode = "demo";
   } else if (backend && backend !== "home-assistant") {
     errors.push(
       `Unsupported MATTERHUB_SMART_HOME_BACKEND value: ${env.MATTERHUB_SMART_HOME_BACKEND}`
-    );
-  }
-
-  if (mode === "mock" && !mockEnabled) {
-    errors.push(
-      "Mock backend requires MATTERHUB_ALLOW_MOCK_DATA=1 to avoid silent production fallback"
     );
   }
 

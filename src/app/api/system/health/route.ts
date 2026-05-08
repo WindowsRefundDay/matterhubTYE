@@ -16,13 +16,11 @@ export async function GET() {
     );
   }
 
-  if (config.mode === "mock") {
+  if (config.mode === "demo") {
     return NextResponse.json({
-      status: "degraded",
+      status: "ok",
       backend: config.mode,
-      errors: [
-        "Mock backend is active. Production paths must use a real Home Assistant connection.",
-      ],
+      note: "Demo mode is active. Home Assistant calls are skipped.",
     });
   }
 

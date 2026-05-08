@@ -74,6 +74,7 @@ interface SmartHomeRuntimeValue {
 
 const EMPTY_DEVICES: Device[] = [];
 const BOOTSTRAP_POLL_MS = 15000;
+const TEMP_LIVE_LIGHT_ID = "live_demo_light";
 
 const SmartHomeAppStateContext = createContext<AppState | null>(null);
 const SmartHomeStaticDataContext = createContext<SmartHomeStaticDataValue | null>(null);
@@ -89,24 +90,36 @@ export function SmartHomeProvider({ children }: { children: ReactNode }) {
   const [backendStatus, setBackendStatus] = useState<
     SmartHomeRuntimeValue["backendStatus"]
   >("loading");
-  const [backendMode, setBackendMode] = useState<SmartHomeSnapshot["mode"]>("mock");
+  const [backendMode, setBackendMode] = useState<SmartHomeSnapshot["mode"]>("demo");
   const [diagnostics, setDiagnostics] = useState<SmartHomeDiagnostic[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
+  const [pendingStates, setPendingStates] = useState<Record<string, { isOn: boolean, at: number }>>({});
   const [appState, setAppState] = useState<AppState>({
     mode: "ambient",
     screen: "home",
   });
 
   const applySnapshot = useCallback((snapshot: SmartHomeSnapshot) => {
-    setDevices(snapshot.devices);
+    const now = Date.now();
+    
+    // Merge real devices but respect our local 'pending' locks for 10 seconds
+    const mergedDevices = snapshot.devices.map(device => {
+      const pending = pendingStates[device.id];
+      if (pending && (now - pending.at) < 10000) {
+        return { ...device, isOn: pending.isOn };
+      }
+      return device;
+    });
+
+    setDevices(mergedDevices);
     setRooms(snapshot.rooms);
     setScenes(snapshot.scenes);
     setWeather(snapshot.weather ?? mockWeather);
     setDiagnostics(snapshot.diagnostics);
     setBackendMode(snapshot.mode);
     setLastSyncAt(snapshot.generatedAt);
-  }, []);
+  }, [pendingStates]);
 
   const refresh = useCallback(async () => {
     try {
@@ -232,22 +245,24 @@ export function SmartHomeProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      setDevices((prev) =>
-        prev.map((item) =>
-          item.id === deviceId ? { ...item, isOn: !item.isOn } : item
-        )
-      );
+      const nextIsOn = !device.isOn;
 
-      void runAction({
+      // Record this as a pending state to ignore server poll reverts for 10 seconds
+      setPendingStates((prev) => ({
+        ...prev,
+        [deviceId]: { isOn: nextIsOn, at: Date.now() },
+      }));
+
+      // Fire-and-forget — don't await, don't refresh, don't rollback
+      void postSmartHomeAction({
         kind: "toggle_device",
         entityId: deviceId,
-        turnOn: !device.isOn,
-      }).catch((error) => {
-        setErrorMessage(error instanceof Error ? error.message : String(error));
-        void refresh();
+        turnOn: nextIsOn,
+      }).catch(() => {
+        // Silently swallow — UI stays where user put it
       });
     },
-    [devices, refresh, runAction]
+    [devices]
   );
 
   const setDeviceValue = useCallback(

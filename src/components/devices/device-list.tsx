@@ -12,9 +12,18 @@ const categoryLabels: Record<DeviceCategory, string> = {
   security: "Security",
   sensors: "Sensors",
   plugs: "Plugs",
+  appliances: "Appliances",
 };
 
-const categoryOrder: DeviceCategory[] = ["lights", "climate", "media", "security", "sensors", "plugs"];
+const categoryOrder: DeviceCategory[] = [
+  "lights",
+  "climate",
+  "media",
+  "security",
+  "sensors",
+  "plugs",
+  "appliances",
+];
 
 interface DeviceListProps {
   onSelectDevice: (deviceId: string) => void;

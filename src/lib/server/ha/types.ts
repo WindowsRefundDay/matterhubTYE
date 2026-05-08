@@ -52,7 +52,7 @@ export interface HomeAssistantBootstrapSource {
 }
 
 export interface HomeAssistantRuntimeConfig {
-  mode: "home-assistant" | "mock";
+  mode: "home-assistant" | "demo";
   baseUrl: string;
   token: string | null;
   tokenSource: "env" | "file" | "none";

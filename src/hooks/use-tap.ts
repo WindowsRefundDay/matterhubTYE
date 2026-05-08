@@ -9,9 +9,11 @@ const DRAG_THRESHOLD = 8;
  */
 export function useTap(callback: () => void) {
   const start = useRef<{ x: number; y: number } | null>(null);
+  const handledPointerTap = useRef(false);
 
   return {
     onPointerDown(e: React.PointerEvent) {
+      handledPointerTap.current = false;
       start.current = { x: e.clientX, y: e.clientY };
     },
     onPointerUp(e: React.PointerEvent) {
@@ -19,10 +21,25 @@ export function useTap(callback: () => void) {
       const dx = Math.abs(e.clientX - start.current.x);
       const dy = Math.abs(e.clientY - start.current.y);
       start.current = null;
-      if (dx < DRAG_THRESHOLD && dy < DRAG_THRESHOLD) callback();
+      if (dx < DRAG_THRESHOLD && dy < DRAG_THRESHOLD) {
+        handledPointerTap.current = true;
+        callback();
+      }
+    },
+    onPointerCancel() {
+      start.current = null;
+      handledPointerTap.current = false;
     },
     onPointerLeave() {
       start.current = null;
+    },
+    onClick() {
+      if (handledPointerTap.current) {
+        handledPointerTap.current = false;
+        return;
+      }
+
+      callback();
     },
   };
 }

@@ -85,8 +85,8 @@ function isWithinDayWindow(dayStartsAt: string, nightStartsAt: string, now = new
 
 export function AppShell() {
   const appState = useSmartHomeAppState();
-  const { weather, rooms, scenes } = useSmartHomeStaticData();
-  const { devices, getDevice } = useSmartHomeDevices();
+  const { weather, rooms } = useSmartHomeStaticData();
+  const { getDevice } = useSmartHomeDevices();
   const {
     setMode,
     setScreen,
@@ -291,28 +291,7 @@ export function AppShell() {
     [rooms, selectedRoomId]
   );
 
-  const voiceContext = useMemo(
-    () => {
-      const roomMap = new Map(rooms.map((room) => [room.id, room.name]));
-      return {
-        devices: devices.map((device) => ({
-          entityId: device.id,
-          name: device.name,
-          type: device.type,
-          roomName: roomMap.get(device.roomId) ?? device.roomId,
-          isOn: device.isOn,
-          ...(typeof device.value === "number" ? { value: device.value } : {}),
-          ...(typeof device.temperature === "number" ? { temperature: device.temperature } : {}),
-          ...(typeof device.targetTemperature === "number" ? { targetTemperature: device.targetTemperature } : {}),
-          ...(typeof device.isLocked === "boolean" ? { isLocked: device.isLocked } : {}),
-        })),
-        rooms: rooms.map((room) => ({ id: room.id, name: room.name })),
-        scenes: scenes.map((scene) => ({ entityId: scene.id, name: scene.name })),
-      };
-    },
-    [devices, rooms, scenes]
-  );
-  const voiceAssistant = useVoiceAssistant({ context: voiceContext });
+  const voiceAssistant = useVoiceAssistant();
 
   return (
     <DeviceFrame>

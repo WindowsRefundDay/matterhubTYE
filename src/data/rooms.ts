@@ -5,13 +5,13 @@ export const rooms: Room[] = [
     id: "room-1",
     name: "Living Room",
     icon: "sofa",
-    deviceIds: ["dev-1", "dev-2", "dev-3", "dev-14"],
+    deviceIds: ["dev-1", "dev-2", "dev-3", "dev-14", "dev-15"],
   },
   {
     id: "room-2",
     name: "Kitchen",
     icon: "chef-hat",
-    deviceIds: ["dev-4", "dev-5"],
+    deviceIds: ["dev-4", "dev-5", "dev-16", "dev-17", "dev-18"],
   },
   {
     id: "room-3",
@@ -35,6 +35,12 @@ export const rooms: Room[] = [
     id: "room-6",
     name: "Garage",
     icon: "car",
-    deviceIds: ["dev-12", "dev-13"],
+    deviceIds: ["dev-12", "dev-13", "dev-21"],
+  },
+  {
+    id: "room-7",
+    name: "Laundry",
+    icon: "washer",
+    deviceIds: ["dev-19", "dev-20"],
   },
 ];

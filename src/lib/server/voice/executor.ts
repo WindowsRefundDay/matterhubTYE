@@ -5,7 +5,12 @@ import { loadSystemConfig } from "@/lib/server/system/config";
 import { buildGeminiClient, buildFunctionDeclarations } from "./gemini";
 import { buildToolRegistry } from "./tools/registry";
 import { vlog } from "./log";
-import type { VoiceTool, ToolContext, ExecutedAction, ClientDirective } from "./tools/types";
+import type {
+  VoiceTool,
+  ToolContext,
+  ExecutedAction,
+  ClientDirective,
+} from "./tools/types";
 
 export interface VoiceContext {
   devices: Array<{
@@ -31,7 +36,7 @@ export interface VoiceResponse {
 }
 
 function buildSystemPrompt(ctx: VoiceContext): string {
-  const deviceList = ctx.devices
+  const deviceList = (ctx.devices || [])
     .map((d) => {
       const parts = [`${d.name} (${d.entityId}): ${d.isOn ? "on" : "off"}`];
       if (typeof d.value === "number") parts.push(`brightness ${d.value}%`);
@@ -42,7 +47,7 @@ function buildSystemPrompt(ctx: VoiceContext): string {
     })
     .join("\n");
 
-  const sceneList = ctx.scenes
+  const sceneList = (ctx.scenes || [])
     .map((s) => `  - ${s.name} (${s.entityId})`)
     .join("\n");
 
@@ -71,17 +76,11 @@ async function runGroundedSearch(
     vlog.info("gemini", `Google Search grounding: "${query}"`);
     const searchModel = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
-      // @ts-expect-error — googleSearch is valid at runtime but not yet typed in this SDK version
+      // @ts-expect-error runtime-valid
       tools: [{ googleSearch: {} }],
     });
     const result = await searchModel.generateContent(query);
     const text = result.response.text().trim();
-    const queries = (result.response.candidates?.[0] as unknown as {
-      groundingMetadata?: { webSearchQueries?: string[] };
-    })?.groundingMetadata?.webSearchQueries;
-    if (queries?.length) {
-      vlog.info("gemini", `Search queries used: ${queries.join(", ")}`);
-    }
     return text || "No results found.";
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
@@ -90,15 +89,13 @@ async function runGroundedSearch(
   }
 }
 
-async function transcribeUserAudio(
-  genAI: ReturnType<typeof buildGeminiClient>,
+export async function transcribeAudioWithGemini(
   audioBase64: string,
   mimeType: string
 ): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-    });
+    const genAI = buildGeminiClient();
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent([
       {
         text: [
@@ -115,57 +112,41 @@ async function transcribeUserAudio(
   }
 }
 
-export async function runVoiceConversationTurn(
-  audioBase64: string,
-  mimeType: string,
-  voiceContext: VoiceContext
-): Promise<VoiceResponse> {
-  const turnStart = Date.now();
-  vlog.info("session", "Turn started", { mimeType, audioBytes: Math.round(audioBase64.length * 0.75) });
+interface ConversationExecutionResult {
+  text: string;
+  actionsExecuted: ExecutedAction[];
+  clientDirectives: ClientDirective[];
+  iterations: number;
+}
 
+async function executeConversation(
+  userMessage: string,
+  voiceContext: VoiceContext
+): Promise<ConversationExecutionResult> {
   const [haConfig, systemConfig] = await Promise.all([
-    loadHomeAssistantConfig().catch((e) => {
-      vlog.warn("session", "HA config unavailable — tool calls will use mock mode", { error: String(e) });
-      return null;
-    }),
+    loadHomeAssistantConfig().catch(() => null),
     loadSystemConfig(),
   ]);
-
-  vlog.info("audio", "Audio received", {
-    mimeType,
-    estimatedBytes: Math.round(audioBase64.length * 0.75),
-    deviceCount: voiceContext.devices.length,
-    sceneCount: voiceContext.scenes.length,
-  });
 
   const toolCtx: ToolContext = { haConfig, systemConfig };
   const tools = buildToolRegistry();
   const functionDeclarations = buildFunctionDeclarations(tools);
   const toolMap = new Map<string, VoiceTool>(tools.map((t) => [t.name, t]));
 
-  vlog.info("gemini", `Sending audio to gemini-2.5-flash (${tools.length} tools registered)`);
-
   const genAI = buildGeminiClient();
-  const userTextPromise = transcribeUserAudio(genAI, audioBase64, mimeType);
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
     systemInstruction: buildSystemPrompt(voiceContext),
     tools: [{ functionDeclarations }],
-    // AUTO is the default — Gemini decides when to call tools vs respond directly
   });
 
   const chat = model.startChat();
+  let result = await chat.sendMessage([{ text: userMessage }]);
 
-  let result = await chat.sendMessage([
-    { inlineData: { data: audioBase64, mimeType } },
-  ]);
-
-  const firstResponseMs = Date.now() - turnStart;
   const firstParts = result.response.candidates?.[0]?.content?.parts ?? [];
   const firstFcCount = firstParts.filter((p) => p.functionCall != null).length;
   const firstText = firstParts.find((p) => p.text)?.text?.slice(0, 120);
-
-  vlog.info("gemini", `First response received (${firstResponseMs}ms)`, {
+  vlog.info("gemini", "First text-turn response", {
     toolCallsRequested: firstFcCount,
     textPreview: firstText ?? "(none)",
     finishReason: result.response.candidates?.[0]?.finishReason,
@@ -174,61 +155,48 @@ export async function runVoiceConversationTurn(
   const actionsExecuted: ExecutedAction[] = [];
   const clientDirectives: ClientDirective[] = [];
 
-  // Tool call loop — Gemini may chain multiple rounds of tool calls
   let iterations = 0;
   const MAX_ITERATIONS = 5;
 
   while (iterations < MAX_ITERATIONS) {
-    iterations++;
+    iterations += 1;
     const parts = result.response.candidates?.[0]?.content?.parts ?? [];
     const functionCallParts = parts.filter((p) => p.functionCall != null);
 
     if (functionCallParts.length === 0) break;
 
-    vlog.info("tool", `Round ${iterations}: executing ${functionCallParts.length} tool call(s)`, {
-      tools: functionCallParts.map((p) => p.functionCall!.name),
-    });
-
-    // Execute all tool calls in parallel
     const toolResults = await Promise.all(
       functionCallParts.map(async (part) => {
         const fc = part.functionCall!;
         const args = (fc.args ?? {}) as Record<string, unknown>;
 
-        // web_search is handled specially — run a separate Gemini call with
-        // Google Search grounding (can't combine grounding + function calling).
         if (fc.name === "web_search") {
           const query = (args.query as string | undefined) ?? "";
-          vlog.info("tool", `→ web_search (grounded)`, { query });
           const searchResult = await runGroundedSearch(genAI, query);
-          vlog.info("tool", `← web_search: ${searchResult.slice(0, 120)}`);
-          actionsExecuted.push({ tool: "web_search", args, success: true, message: searchResult });
-          return { name: "web_search", result: { success: true, message: searchResult }, args };
-        }
-
-        const tool = toolMap.get(fc.name);
-
-        if (!tool) {
-          vlog.warn("tool", `Unknown tool called: ${fc.name}`, { args });
-          return {
-            name: fc.name,
-            result: { success: false, message: `Unknown tool: ${fc.name}` },
+          actionsExecuted.push({
+            tool: "web_search",
             args,
+            success: true,
+            message: searchResult,
+          });
+          return {
+            name: "web_search",
+            result: { success: true, message: searchResult },
           };
         }
 
-        vlog.info("tool", `→ ${fc.name}`, { args });
+        const tool = toolMap.get(fc.name);
+        if (!tool) {
+          return {
+            name: fc.name,
+            result: { success: false, message: `Unknown tool: ${fc.name}` },
+          };
+        }
+
         const toolResult = await tool.execute(args, toolCtx);
-        vlog.info("tool", `← ${fc.name}: ${toolResult.success ? "ok" : "fail"} — ${toolResult.message}`, {
-          success: toolResult.success,
-          directive: toolResult.clientDirective,
-        });
 
         if (toolResult.clientDirective) {
           clientDirectives.push(toolResult.clientDirective);
-          vlog.info("directive", `Client directive issued: ${toolResult.clientDirective.kind}`, {
-            directive: toolResult.clientDirective,
-          });
         }
 
         actionsExecuted.push({
@@ -238,22 +206,23 @@ export async function runVoiceConversationTurn(
           message: toolResult.message,
         });
 
-        return { name: fc.name, result: toolResult, args };
+        return {
+          name: fc.name,
+          result: toolResult,
+        };
       })
     );
 
-    const functionResponseParts = toolResults.map((tr) => ({
-      functionResponse: {
-        name: tr.name,
-        response: { result: tr.result.message },
-      },
-    }));
-
-    vlog.info("gemini", `Sending ${toolResults.length} tool result(s) back to Gemini`);
-    result = await chat.sendMessage(functionResponseParts);
+    result = await chat.sendMessage(
+      toolResults.map((entry) => ({
+        functionResponse: {
+          name: entry.name,
+          response: { result: entry.result.message },
+        },
+      }))
+    );
   }
 
-  // Extract final text response
   const finalParts = result.response.candidates?.[0]?.content?.parts ?? [];
   const text =
     finalParts
@@ -262,15 +231,71 @@ export async function runVoiceConversationTurn(
       .join(" ")
       .trim() || "Done.";
 
-  const totalMs = Date.now() - turnStart;
-  const userText = await userTextPromise;
-  vlog.info("session", `Turn complete (${totalMs}ms total)`, {
-    userText: userText.slice(0, 120),
-    text: text.slice(0, 200),
-    toolRounds: iterations,
-    actionsExecuted: actionsExecuted.length,
-    clientDirectives: clientDirectives.length,
+  return {
+    text,
+    actionsExecuted,
+    clientDirectives,
+    iterations,
+  };
+}
+
+export async function runVoiceTextConversationTurn(
+  userText: string,
+  voiceContext: VoiceContext
+): Promise<VoiceResponse> {
+  const turnStart = Date.now();
+  const normalizedUserText = userText.trim();
+
+  vlog.info("session", "Text turn started", {
+    userText: normalizedUserText.slice(0, 160),
   });
 
-  return { userText, text, actionsExecuted, clientDirectives };
+  const execution = await executeConversation(normalizedUserText, voiceContext);
+
+  vlog.info("session", `Text turn complete (${Date.now() - turnStart}ms)`, {
+    userText: normalizedUserText.slice(0, 120),
+    text: execution.text.slice(0, 200),
+    toolRounds: execution.iterations,
+    actionsExecuted: execution.actionsExecuted.length,
+    clientDirectives: execution.clientDirectives.length,
+  });
+
+  return {
+    userText: normalizedUserText,
+    text: execution.text,
+    actionsExecuted: execution.actionsExecuted,
+    clientDirectives: execution.clientDirectives,
+  };
+}
+
+export async function runVoiceConversationTurn(
+  audioBase64: string,
+  mimeType: string,
+  voiceContext: VoiceContext
+): Promise<VoiceResponse> {
+  const turnStart = Date.now();
+  const estimatedBytes = Math.round(audioBase64.length * 0.75);
+
+  vlog.info("session", "Audio turn started", { mimeType, audioBytes: estimatedBytes });
+
+  const userText = await transcribeAudioWithGemini(audioBase64, mimeType);
+
+  if (!userText.trim()) {
+    vlog.warn("audio", "Gemini transcription came back empty", {
+      mimeType,
+      estimatedBytes,
+    });
+
+    return {
+      userText: "",
+      text: "I couldn't hear you clearly. Please try again.",
+      actionsExecuted: [],
+      clientDirectives: [],
+    };
+  }
+
+  const textTurn = await runVoiceTextConversationTurn(userText, voiceContext);
+
+  vlog.info("session", `Audio turn complete (${Date.now() - turnStart}ms)`);
+  return textTurn;
 }

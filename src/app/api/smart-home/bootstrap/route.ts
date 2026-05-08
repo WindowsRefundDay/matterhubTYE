@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { HomeAssistantConfigError, HomeAssistantRequestError, HomeAssistantWebSocketError } from "@/lib/server/ha/errors";
 import { loadHomeAssistantConfig } from "@/lib/server/ha/config";
-import { buildMockSmartHomeSnapshot } from "@/lib/server/ha/mock";
+import { buildDemoSmartHomeSnapshot } from "@/lib/server/ha/demo";
+import { readDemoSettings } from "@/lib/server/ha/demo/settings";
 import { loadSmartHomeSnapshot } from "@/lib/server/ha";
 
 export async function GET() {
   const config = await loadHomeAssistantConfig();
 
-  if (config.mode === "mock") {
+  if (config.mode === "demo") {
     if (config.errors.length > 0) {
       return NextResponse.json(
         {
@@ -18,9 +19,10 @@ export async function GET() {
       );
     }
 
+    const toggle = await readDemoSettings();
     return NextResponse.json({
       status: "ok",
-      snapshot: buildMockSmartHomeSnapshot(),
+      snapshot: buildDemoSmartHomeSnapshot(toggle.enabled ? "toggle" : "env"),
     });
   }
 

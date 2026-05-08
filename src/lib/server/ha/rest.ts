@@ -18,16 +18,19 @@ export class HomeAssistantRestClient {
     return this.request<HomeAssistantState[]>("/api/states");
   }
 
+  async getState(entityId: string) {
+    return this.request<HomeAssistantState>(`/api/states/${entityId}`);
+  }
+
   async callService(call: HomeAssistantServiceCall) {
+    // HA REST API expects entity_id flat in the body (not nested under 'target' — that's WS format)
+    const body: Record<string, unknown> = {
+      ...(call.target?.entity_id ? { entity_id: call.target.entity_id } : {}),
+      ...(call.serviceData ?? {}),
+    };
     return this.request<unknown[]>(
       `/api/services/${call.domain}/${call.service}`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          ...(call.target ? { target: call.target } : {}),
-          ...(call.serviceData ?? {}),
-        }),
-      }
+      { method: "POST", body: JSON.stringify(body) }
     );
   }
 

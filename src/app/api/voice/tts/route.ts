@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 
-const DEFAULT_PIPER_BINARY = "/home/pi/.venv/bin/piper";
+const DEFAULT_PIPER_BINARY = "/home/matter/.venv/bin/piper";
 const DEFAULT_PIPER_MODEL =
-  "/home/pi/piper-models/en_US-amy-medium.onnx";
+  "/home/matter/piper-models/en_US-amy-medium.onnx";
 
 type TtsRequestBody = {
   text?: string;

@@ -1,8 +1,9 @@
 import "server-only";
 
-import { buildMockSmartHomeSnapshot } from "./mock";
+import { buildDemoSmartHomeSnapshot } from "./demo/snapshot";
+import { readDemoSettings } from "./demo/settings";
 import { buildSmartHomeSnapshot } from "./mapping";
-import { requireHomeAssistantConfig } from "./config";
+import { loadHomeAssistantConfig, requireHomeAssistantConfig } from "./config";
 import { HomeAssistantRestClient } from "./rest";
 import { withHomeAssistantWebSocketClient } from "./websocket";
 import type {
@@ -12,10 +13,34 @@ import type {
 } from "./types";
 
 export async function loadSmartHomeSnapshot() {
-  const config = await requireHomeAssistantConfig();
+  const demoSettings = await readDemoSettings();
+  const config = demoSettings.enabled
+    ? await loadHomeAssistantConfig()
+    : await requireHomeAssistantConfig();
 
-  if (config.mode === "mock") {
-    return buildMockSmartHomeSnapshot();
+  if (config.mode === "demo" || demoSettings.enabled) {
+    const snapshot = buildDemoSmartHomeSnapshot(demoSettings.enabled ? "toggle" : "env");
+    
+    // Merge real state into the live_demo_light placeholder (keep ID stable for room linkage)
+    if (demoSettings.liveEntityId && config.token) {
+      try {
+        const restClient = new HomeAssistantRestClient({ ...config, token: config.token });
+        const state = await restClient.getState(demoSettings.liveEntityId);
+        if (state) {
+          snapshot.devices = snapshot.devices.map(d => 
+            d.id === "live_demo_light" ? { 
+              ...d, 
+              name: "Basement Light",
+              isOn: state.state === "on",
+              value: typeof state.attributes.brightness === "number" ? Math.round((state.attributes.brightness / 255) * 100) : d.value
+            } : d
+          );
+        }
+      } catch {
+        // Fallback to purely simulated if HA is unreachable
+      }
+    }
+    return snapshot;
   }
 
   const restClient = new HomeAssistantRestClient(config);

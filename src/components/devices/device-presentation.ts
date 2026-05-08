@@ -65,6 +65,42 @@ const devicePresentation: Record<
     icon: "wind",
     status: (device) => (device.value ? `${device.value}%` : "On"),
   },
+  washer: {
+    control: "light",
+    icon: "washer",
+    status: (device) => device.mediaTitle || "On",
+  },
+  dryer: {
+    control: "light",
+    icon: "dryer",
+    status: (device) => device.mediaTitle || "On",
+  },
+  dishwasher: {
+    control: "light",
+    icon: "dishwasher",
+    status: (device) => device.mediaTitle || "On",
+  },
+  fridge: {
+    control: "sensor",
+    icon: "fridge",
+    status: (device) =>
+      device.temperature != null ? `${device.temperature}°F` : "Cooling",
+  },
+  garage_door: {
+    control: "lock",
+    icon: "garage-door",
+    status: (device) => (device.isLocked ? "Closed" : "Open"),
+  },
+  speaker: {
+    control: "media",
+    icon: "speaker",
+    status: (device) => device.mediaTitle || "On",
+  },
+  doorbell: {
+    control: "sensor",
+    icon: "bell",
+    status: (device) => device.lastTriggered || "Ready",
+  },
 };
 
 export function getDeviceControlKind(deviceType: DeviceType): DeviceControlKind {

@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useTap } from "@/hooks/use-tap";
 import { WifiPanel } from "./wifi-panel";
 import { DisplayPanel } from "./display-panel";
+import { DemoModePanel } from "./demo-mode-panel";
 import type { AudioAction, AudioStatus } from "@/types/system";
 
 export function SettingsPanel() {
@@ -175,12 +176,12 @@ export function SettingsPanel() {
       });
     }
 
-    if (backendMode === "mock") {
+    if (backendMode === "demo") {
       alerts.push({
         id: "demo",
         icon: "sparkles",
         title: "Demo Mode",
-        description: "Currently showing mock device data.",
+        description: "Showing simulated rooms, devices, and appliances.",
         tone: "bg-[var(--minimalist-pastel-blue)] text-[var(--minimalist-pastel-blue-fg)]",
       });
     }
@@ -295,6 +296,10 @@ export function SettingsPanel() {
             ))}
           </div>
         )}
+
+        <Section title="Demo Mode">
+          <DemoModePanel />
+        </Section>
 
         <Section title="Appearance">
           <SettingRow label="Dark Mode" description="Optimized for ambient display" toggle isOn={darkMode} />

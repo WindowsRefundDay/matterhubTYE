@@ -16,7 +16,7 @@ export interface SmartHomeEntityReference {
 }
 
 export interface SmartHomeSnapshot {
-  mode: "home-assistant" | "mock";
+  mode: "home-assistant" | "demo";
   generatedAt: string;
   rooms: Room[];
   devices: Device[];

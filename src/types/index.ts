@@ -8,7 +8,14 @@ export type DeviceType =
   | "camera"
   | "fan"
   | "tv"
-  | "purifier";
+  | "purifier"
+  | "washer"
+  | "dryer"
+  | "dishwasher"
+  | "fridge"
+  | "garage_door"
+  | "speaker"
+  | "doorbell";
 
 export type DeviceCategory =
   | "lights"
@@ -16,7 +23,8 @@ export type DeviceCategory =
   | "media"
   | "security"
   | "sensors"
-  | "plugs";
+  | "plugs"
+  | "appliances";
 
 export interface Device {
   id: string;
